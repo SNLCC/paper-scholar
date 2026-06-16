@@ -8,7 +8,7 @@ paper-scholar 安装脚本
     python install.py
 
 或者一条命令：
-    python -c "$(curl -fsSL https://raw.githubusercontent.com/YOUR_USER/PaperScholar/main/install.py)"
+    python -c "$(curl -fsSL https://raw.githubusercontent.com/YOUR_USER/paper-scholar/main/install.py)"
 """
 
 import json
