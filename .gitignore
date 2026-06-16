@@ -1,0 +1,21 @@
+# paper-scholar .gitignore
+
+# User-specific learning data (varies per user)
+.learnings/
+
+# Model snapshots and archives (can be regenerated)
+models/snapshots/
+models/archive/
+
+# Extracted text files (can be regenerated)
+*.txt
+
+# Accumulated paper data (may contain copyrighted content)
+data/
+
+# Prescriptions (can be regenerated from models)
+prescriptions/
+
+# Python cache
+__pycache__/
+*.pyc

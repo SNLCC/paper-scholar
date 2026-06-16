@@ -1,0 +1,4 @@
+interface:
+  display_name: "论文精读与写作助手"
+  short_description: "人文社科论文精读建模与写作指导"
+  default_prompt: "使用 $paper-scholar 精读这篇论文，分析其结构模式和论证规律，建立写作模型。"

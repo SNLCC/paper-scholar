@@ -1,0 +1,35 @@
+{
+  "model_id": "",
+  "label": "",
+  "type_family": "auto",
+  "type_signature": "",
+  "created": "",
+  "updated": "",
+  "papers_analyzed": [],
+  "papers_count": 0,
+  "confidence": 0.0,
+
+  "argumentation_model": {
+    "classification_frameworks": [],
+    "argumentation_structures": [],
+    "position_differentiations": [],
+    "confidence": 0.0
+  },
+
+  "writing_pattern_model": {
+    "introduction_function_sequences": [],
+    "body_organization_principles": [],
+    "paragraph_cohesion_patterns": [],
+    "synthesis_paragraph_patterns": [],
+    "confidence": 0.0
+  },
+
+  "concept_usage_model": {
+    "concept_definitions": [],
+    "concept_operationalization_patterns": [],
+    "topic_selection_criteria": [],
+    "title_expression_patterns": [],
+    "section_title_patterns": [],
+    "confidence": 0.0
+  }
+}
