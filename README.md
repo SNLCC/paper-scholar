@@ -118,4 +118,8 @@ python run.py --help
 
 MIT License — 详见 [LICENSE](LICENSE)。
 
-外部依赖：`pdfplumber`（MIT License）。
+### 外部依赖
+
+| 库 | 版本 | 许可证 | 说明 |
+|----|------|--------|------|
+| [pdfplumber](https://github.com/jsvine/pdfplumber) | `==0.11.10` | MIT | PDF 文本提取，已在此版本上验证。如需升级请自行评估新版本的许可证兼容性 |
