@@ -118,4 +118,4 @@ python run.py --help
 
 MIT License — 详见 [LICENSE](LICENSE)。
 
-外部依赖：`pdfplumber`（MIT License）。
+外部依赖：`pdfplumber`v0.11.10（MIT License）。
