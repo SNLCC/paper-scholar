@@ -23,7 +23,7 @@ from pathlib import Path
 
 # 填写你的 GitHub 信息
 GITHUB_USER = "SNLCC"
-REPO_NAME = "PaperScholar"
+REPO_NAME = "paper-scholar"
 BRANCH = "main"
 
 

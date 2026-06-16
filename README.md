@@ -1,8 +1,8 @@
-# PaperScholar
+# paper-scholar
 
 **论文精读与写作辅助工具** — 对人文社科论文进行章→段→句三层逐级精读，构建具有置信度支撑的写作模型。
 
-读一篇不能只读一篇。PaperScholar 从每篇论文中提取可迁移的论证规律和写作模式，随积累越来越精准。
+读一篇不能只读一篇。paper-scholar 从每篇论文中提取可迁移的论证规律和写作模式，随积累越来越精准。
 
 ---
 
@@ -17,6 +17,14 @@
 ---
 
 ## 快速开始
+
+### 一键安装
+
+```bash
+python -c "$(curl -fsSL https://raw.githubusercontent.com/SNLCC/paper-scholar/main/install.py)"
+```
+
+### 或者手动安装
 
 ```bash
 # 1. 安装依赖
