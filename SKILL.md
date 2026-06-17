@@ -286,6 +286,20 @@ python run.py model prune <model_id>
 python run.py prescribe recommend introduction
 ```
 
+## 常见问题
+
+### CNKI 论文提取乱码
+
+CNKI 的 PDF 使用自定义字体 `HGFX_CNKI`，其字符映射表（ToUnicode CMap）不完整，导致部分文字提取为乱码。
+
+**解决方案**：安装 PyMuPDF 作为第三引擎（AGPL 许可，需用户自行选择）：
+```bash
+pip install pymupdf
+python run.py extract paper.pdf --engine pymupdf
+```
+
+PyMuPDF 对自定义 CJK 字体的处理比 pdfplumber 更鲁棒。
+
 ## 置信度说明
 
 所有基于模型给出的建议都必须附带置信度标识，格式：
