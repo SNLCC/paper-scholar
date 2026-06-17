@@ -124,5 +124,3 @@ MIT License — 详见 [LICENSE](LICENSE)。
 |----|------|--------|------|
 | [pdfplumber](https://github.com/jsvine/pdfplumber) | `==0.11.10` | MIT | PDF 文本提取，已在此版本上验证 |
 
-> 项目代码均为原创，无其他外部依赖。所有许可风险已排除。
-
