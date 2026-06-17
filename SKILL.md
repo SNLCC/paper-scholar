@@ -61,8 +61,7 @@ description: >
   -> 从坚果云下载论文
 
 开始前：
-  1. pip install -r requirements.txt
-  2. python run.py install
+  python install.py   # 装依赖 + 注册到 Codex，已装则自动检查更新
 
 然后告诉我你想做什么。
 """

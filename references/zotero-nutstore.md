@@ -153,7 +153,50 @@ python scripts/extract_pdf_text.py ./paper.pdf --output paper.txt
 
 ---
 
-## 环境变量配置（推荐）
+## 故障排查：本地 API 无法连接
+
+运行 `fetch_zotero.py local collections` 报错连接失败时，按顺序检查：
+
+### 1. Zotero 没启动
+
+Zotero 必须正在运行。后台最小化也可以，但不能完全退出。
+
+### 2. 本地 API 功能未开启
+
+Zotero 需要开启"允许其他应用通信"的选项：
+
+```
+Zotero 菜单 → 编辑 → 设置 → 高级 →
+  → 勾选 "允许其他应用程序与 Zotero 通信"
+  （英文版: Allow other applications to communicate with the Zotero API）
+```
+
+这个选项**默认是关闭的**，这是最常见的原因。
+
+### 3. Zotero 版本问题
+
+Zotero 7.0+ 的本地 API 地址为 `http://localhost:23119/api/`。如果你用的是旧版 Zotero（6.0 以下），端口可能不同。
+
+检查你当前 Zotero 的版本号：**帮助 → 关于 Zotero**
+
+### 4. 端口被占用
+
+如果 23119 端口被其他程序占用了，Zotero 可能用了另一个端口。
+
+```bash
+# 查看端口占用
+netstat -ano | findstr 23119
+```
+
+如果 Zotero 在监听但不是 23119 端口，请修改 `fetch_zotero.py` 中的 `ZOTERO_LOCAL_API` 常量为对应端口。
+
+### 5. 防火墙拦截
+
+Windows 防火墙或杀毒软件可能拦截了本地端口。可尝试临时关闭防火墙测试，确认后添加放行规则。
+
+### 6. 仍然不行？换 Web API
+
+如果本地 API 始终无法连接，可以使用方式二的 Web API（需要 Zotero 官网 API Key），功能相同。
 
 为避免每次输入认证信息，可设置环境变量：
 

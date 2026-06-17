@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+"""fetch_zotero.py — ..."""
+
+# Handle terminal encoding gracefully: if stdout is not UTF-8,
+# use the terminal's native encoding with 'replace' to avoid crashes.
+# This ensures Chinese text displays correctly on Windows terminals (GBK).
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(errors='replace')
+    except (AttributeError, ValueError):
+        pass
+
 """
 fetch_zotero.py — Retrieve papers, annotations, and PDFs from Zotero.
 

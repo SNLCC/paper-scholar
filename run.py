@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""run.py — ..."""
+
+# Handle terminal encoding gracefully
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(errors='replace')
+    except (AttributeError, ValueError):
+        pass
+
 """
 run.py — Unified entry point for all paper-scholar commands.
 
@@ -61,8 +71,8 @@ paper-scholar 是一个学术论文精读与写作辅助工具。它可以：
 
 ------ 快速上手 ------
 
-第一步：安装依赖
-  pip install -r requirements.txt
+第一步：安装
+  python install.py   # 自动下载 + 装依赖 + 注册到 Codex
 
 第二步：精读一篇论文
   python run.py extract paper.pdf --output paper.txt
@@ -75,8 +85,8 @@ paper-scholar 是一个学术论文精读与写作辅助工具。它可以：
 第四步：需要写作指导时
   python run.py prescribe recommend introduction
 
-安装到 Codex：
-  python run.py install
+第四步：更新
+  python install.py   # 自动检测新版本，保留用户数据
 
 查看所有命令：
   python run.py --help
@@ -113,57 +123,8 @@ def _run(script: str, args: list[str]):
 
 
 def cmd_install():
-    """Install the skill to Codex's auto-discovery directory."""
-    import shutil
-    import subprocess
-    import os
-
-    # Determine target directory
-    codex_home = os.environ.get("CODEX_HOME", "")
-    if codex_home:
-        target = Path(codex_home) / "skills" / "paper-scholar"
-    else:
-        target = Path.home() / ".codex" / "skills" / "paper-scholar"
-
-    source = Path(__file__).resolve().parent
-
-    print(f"Installing paper-scholar to: {target}")
-
-    # Create target parent
-    target.parent.mkdir(parents=True, exist_ok=True)
-
-    # Copy if not already there (use symlink on Linux/macOS, copy on Windows)
-    if target.exists():
-        print(f"  Skill already exists at {target}")
-    else:
-        try:
-            # Try symlink first (works on Linux/macOS, some Windows)
-            os.symlink(str(source), str(target))
-            print(f"  Created symlink: {target}")
-        except (OSError, NotImplementedError):
-            # Fall back to copy
-            shutil.copytree(str(source), str(target), ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-            print(f"  Copied to: {target}")
-
-    # Install Python dependencies
-    req_file = source / "requirements.txt"
-    if req_file.exists():
-        print("  Installing dependencies...")
-        result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-r", str(req_file.resolve())],
-            capture_output=True, text=True
-        )
-        if result.returncode == 0:
-            print("  Dependencies installed.")
-        else:
-            # Don't fail on pip errors - user may need to run manually
-            print(f"  Note: pip install had a warning (dependencies may already be installed).")
-            print(f"  If needed, run: pip install -r {req_file}")
-
-    print()
-    print("  Installation complete!")
-    print("  paper-scholar is now available to Codex.")
-    print("  Restart Codex and try: '帮我精读这篇论文'")
+    """Install to Codex skills directory (auto-detects install vs update)."""
+    _run("install.py", [])
 
 
 def main():
@@ -243,6 +204,10 @@ def main():
     # --- install ---
     sub.add_parser("install", help="Install skill to Codex skills directory")
 
+    # --- update ---
+    p_update = sub.add_parser("update", help="Update skill (preserves user data)")
+    p_update.add_argument("--force", action="store_true", help="Force update even if same version")
+
     args = parser.parse_args()
     cmd = args.command
 
@@ -306,6 +271,9 @@ def main():
 
     elif cmd == "install":
         cmd_install()
+
+    elif cmd == "update":
+        _run("install.py", [])
 
     else:
         parser.print_help()
