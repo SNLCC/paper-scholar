@@ -2,20 +2,17 @@
 """
 extract_pdf_text.py — Extract text from academic PDFs.
 
-Three engines:
+Two engines:
 
   1. pdfplumber (MIT) — primary engine. Best for most PDFs.
-  2. PyMuPDF (AGPL, optional) — handles CNKI custom fonts (HGFX_CNKI) better.
-     Install separately: pip install pymupdf
-  3. Built-in fallback (Python stdlib) — zero dependencies, limited layout.
+  2. Built-in fallback (Python stdlib) — zero dependencies, limited layout.
 
-Engine auto-selection order: pdfplumber → pymupdf (if installed) → builtin
+Engine auto-selection order: pdfplumber → builtin
 
 Usage:
     python extract_pdf_text.py <pdf_path> [--output <txt_path>]
     python extract_pdf_text.py <pdf_path> --stdout
     python extract_pdf_text.py <pdf_path> --engine pdfplumber
-    python extract_pdf_text.py <pdf_path> --engine pymupdf    # AGPL, opt-in
     python extract_pdf_text.py <pdf_path> --engine builtin
 """
 
@@ -32,13 +29,6 @@ _HAS_PDFPLUMBER = False
 try:
     import pdfplumber
     _HAS_PDFPLUMBER = True
-except ImportError:
-    pass
-
-_HAS_PYMUPDF = False
-try:
-    import fitz  # PyMuPDF
-    _HAS_PYMUPDF = True
 except ImportError:
     pass
 
@@ -75,30 +65,7 @@ def _extract_with_pdfplumber(pdf_path: str) -> str:
 
 
 # ===================================================================
-#  Engine 2 — PyMuPDF (AGPL, optional)
-#  For PDFs with CNKI custom fonts (HGFX_CNKI) where ToUnicode
-#  mappings are incomplete. Install: pip install pymupdf
-# ===================================================================
-
-def _extract_with_pymupdf(pdf_path: str) -> str:
-    """Extract text using PyMuPDF (fitz).
-
-    Better at handling custom CJK fonts with incomplete CMap,
-    such as CNKI's HGFX_CNKI.
-    """
-    import fitz
-    doc = fitz.open(pdf_path)
-    pages = []
-    for page in doc:
-        text = page.get_text("text")
-        if text and text.strip():
-            pages.append(text.strip())
-    doc.close()
-    return "\n\n".join(pages)
-
-
-# ===================================================================
-#  Engine 3 — Built-in (zero external deps)
+#  Engine 2 — Built-in (zero external deps)
 # ===================================================================
 
 def _read_until(data: bytes, start: int, delimiter: bytes) -> tuple[bytes, int]:
@@ -497,34 +464,22 @@ def extract_text(pdf_path: str, engine: str = "auto") -> str:
 
     Args:
         pdf_path: Path to the PDF file.
-        engine: 'auto' (try pdfplumber → pymupdf → builtin),
-                'pdfplumber', 'pymupdf', or 'builtin'.
+        engine: 'auto' (try pdfplumber first, fall back to builtin),
+                'pdfplumber', or 'builtin'.
 
     Returns:
         Plain text of the document.
     """
     if engine == "auto":
-        if _HAS_PDFPLUMBER:
-            engine = "pdfplumber"
-        elif _HAS_PYMUPDF:
-            engine = "pymupdf"
-        else:
-            engine = "builtin"
+        engine = "pdfplumber" if _HAS_PDFPLUMBER else "builtin"
 
     if engine == "pdfplumber":
         if not _HAS_PDFPLUMBER:
-            print("Warning: pdfplumber not installed. Trying PyMuPDF...", file=sys.stderr)
-            engine = "pymupdf" if _HAS_PYMUPDF else "builtin"
-        else:
-            return _extract_with_pdfplumber(pdf_path)
-
-    if engine == "pymupdf":
-        if not _HAS_PYMUPDF:
-            print("Warning: PyMuPDF not installed. Try: pip install pymupdf", file=sys.stderr)
-            print("Falling back to built-in engine.", file=sys.stderr)
+            print("Warning: pdfplumber not installed. Falling back to built-in engine.",
+                  file=sys.stderr)
             engine = "builtin"
         else:
-            return _extract_with_pymupdf(pdf_path)
+            return _extract_with_pdfplumber(pdf_path)
 
     return _extract_with_builtin(pdf_path)
 
@@ -540,9 +495,9 @@ def main():
     parser.add_argument("pdf", help="Path to the PDF file")
     parser.add_argument("--output", "-o", help="Output text file path")
     parser.add_argument("--stdout", action="store_true", help="Print to stdout")
-    parser.add_argument("--engine", choices=["auto", "pdfplumber", "pymupdf", "builtin"],
+    parser.add_argument("--engine", choices=["auto", "pdfplumber", "builtin"],
                         default="auto",
-                        help="Extraction engine (default: auto; pymupdf is AGPL, opt-in)")
+                        help="Extraction engine (default: auto = try pdfplumber first)")
     args = parser.parse_args()
 
     pdf_path = Path(args.pdf)

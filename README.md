@@ -123,10 +123,6 @@ MIT License — 详见 [LICENSE](LICENSE)。
 | 库 | 版本 | 许可证 | 说明 |
 |----|------|--------|------|
 | [pdfplumber](https://github.com/jsvine/pdfplumber) | `==0.11.10` | MIT | PDF 文本提取，已在此版本上验证 |
-| [PyMuPDF](https://pypi.org/project/PyMuPDF/) | 可选 | AGPL v3 | CNKI 自定义字体乱码时使用，需手动安装：`pip install pymupdf` |
 
-> **许可证说明**：PyMuPDF 为可选依赖，不在 `requirements.txt` 中，不由安装脚本自动安装。
-> 代码中使用 `try/except` 条件导入，仅在用户手动安装后才启用。
-> 因此 PyMuPDF 的 AGPL 协议不延伸至项目本身，项目整体保持 MIT 许可。
-> 如需使用 PyMuPDF，请自行评估 AGPL v3 协议的条款。
+> 项目代码均为原创，无其他外部依赖。所有许可风险已排除。
 

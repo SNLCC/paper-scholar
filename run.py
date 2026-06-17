@@ -138,7 +138,7 @@ def main():
     p_extract.add_argument("pdf", help="PDF file path")
     p_extract.add_argument("--output", "-o", help="Output text file")
     p_extract.add_argument("--stdout", action="store_true", help="Print to stdout")
-    p_extract.add_argument("--engine", choices=["auto", "pdfplumber", "pymupdf", "builtin"], default="auto")
+    p_extract.add_argument("--engine", choices=["auto", "pdfplumber", "builtin"], default="auto")
 
     # --- fetch ---
     p_fetch = sub.add_parser("fetch", help="Zotero/Nutstore access")

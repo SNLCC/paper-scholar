@@ -290,15 +290,7 @@ python run.py prescribe recommend introduction
 
 ### CNKI 论文提取乱码
 
-CNKI 的 PDF 使用自定义字体 `HGFX_CNKI`，其字符映射表（ToUnicode CMap）不完整，导致部分文字提取为乱码。
-
-**解决方案**：安装 PyMuPDF 作为第三引擎（AGPL 许可，需用户自行选择）：
-```bash
-pip install pymupdf
-python run.py extract paper.pdf --engine pymupdf
-```
-
-PyMuPDF 对自定义 CJK 字体的处理比 pdfplumber 更鲁棒。
+CNKI 的 PDF 使用自定义字体 `HGFX_CNKI`，其字符映射表不完整，导致部分文字提取为乱码。这是已知局限，目前暂无完美解决方案。建议在 CNKI 网站中使用"导出→文字"功能获取纯文本后，再交给 Codex 分析。
 
 ## 置信度说明
 
