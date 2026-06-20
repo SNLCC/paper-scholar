@@ -30,6 +30,7 @@ BRANCH = "main"
 
 # 用户数据目录——更新时必须保留
 USER_DATA_DIRS = {"models", "data", ".learnings", "prescriptions"}
+USER_DATA_FILES = {".skill_state.json"}
 
 
 def _version_from_path(path: Path) -> str:
