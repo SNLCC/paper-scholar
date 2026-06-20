@@ -30,35 +30,45 @@
     "confidence": 0.0
   },
   "chapter_templates": {
+    "academic_review": {
+      "overall_structure": {
+        "sections": [
+          {
+            "position": 1,
+            "function": ""
+          },
+          {
+            "position": 2,
+            "function": ""
+          },
+          {
+            "position": 3,
+            "function": ""
+          },
+          {
+            "position": 4,
+            "function": ""
+          },
+          {
+            "position": 5,
+            "function": ""
+          }
+        ]
+      },
+      "position_criteria": {},
+      "common_errors": [],
+      "evaluation_criteria": []
+    },
     "introduction": {
       "purpose": "",
       "internal_arc": "",
       "common_moves": []
-    },
-    "literature_review": {
-      "purpose": "",
-      "internal_arc": "",
-      "common_moves": []
-    },
-    "methodology": {
-      "purpose": "",
-      "internal_arc": "",
-      "common_moves": []
-    },
-    "analysis": {
-      "purpose": "",
-      "internal_arc": "",
-      "common_moves": []
-    },
-    "discussion": {
-      "purpose": "",
-      "internal_arc": "",
-      "common_moves": []
-    },
-    "conclusion": {
-      "purpose": "",
-      "internal_arc": "",
-      "common_moves": []
     }
+  },
+  "verification_required": true,
+  "reproduction": {
+    "core_argument_summary": "",
+    "key_quotes": [],
+    "annotation_threads": []
   }
 }

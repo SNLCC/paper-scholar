@@ -70,9 +70,11 @@ def _save_state(state: dict):
 def _check_evolution(model_dir: Path | None = None):
     """Check if the skill should suggest self-improvements after adding a paper.
 
-    Called automatically after each add_analysis. Suggests:
-      - Pruning after every N papers
-      - Deep pruning after more papers
+    Called automatically after each add_analysis. Uses "papers since last check"
+    logic (not modulo) to avoid repeated triggers at every multiple.
+    Suggests:
+      - Pruning when N papers have accumulated since last prune check
+      - Deep pruning + snapshot at larger intervals
       - Model merge review after many papers
     Returns a list of suggestion strings (also printed to stderr).
     """
@@ -81,29 +83,34 @@ def _check_evolution(model_dir: Path | None = None):
     thresholds = state.get("thresholds", {})
     suggestions = []
 
-    last_prune = state.get("last_prune_check")
+    papers_since_prune = _papers_since(state.get("last_prune_check"), state)
     prune_every = thresholds.get("prune_suggest_every", 5)
-    if total > 0 and total % prune_every == 0:
-        if not last_prune or _papers_since(last_prune, state) >= prune_every:
-            suggestions.append(
-                f"[SELF-EVOLVE] You have analyzed {total} papers. "
-                f"Consider running: python run.py model prune <model_id> to remove low-frequency patterns."
-            )
-            state["last_prune_check"] = datetime.now().isoformat()
-
-    deep_prune_every = thresholds.get("deep_prune_every", 15)
-    if total > 0 and total % deep_prune_every == 0:
+    if papers_since_prune >= prune_every:
         suggestions.append(
-            f"[SELF-EVOLVE] {total} papers analyzed — time for a deep prune + snapshot. "
+            f"[SELF-EVOLVE] {papers_since_prune} papers since last prune check ({total} total). "
+            f"Consider running: python run.py model prune <model_id> to remove low-frequency patterns."
+        )
+        state["last_prune_check"] = datetime.now().isoformat()
+
+    papers_since_deep = _papers_since(state.get("last_deep_prune_check"), state)
+    deep_prune_every = thresholds.get("deep_prune_every", 15)
+    if papers_since_deep >= deep_prune_every:
+        suggestions.append(
+            f"[SELF-EVOLVE] {papers_since_deep} papers since last deep check ({total} total) "
+            f"— time for a deep prune + snapshot. "
             f"Run: python run.py model snapshot <model_id> then prune."
         )
+        state["last_deep_prune_check"] = datetime.now().isoformat()
 
+    papers_since_merge = _papers_since(state.get("last_merge_review"), state)
     merge_every = thresholds.get("model_merge_review_every", 30)
-    if total > 0 and total % merge_every == 0:
+    if papers_since_merge >= merge_every:
         suggestions.append(
-            f"[SELF-EVOLVE] {total} papers — review model system for merges. "
+            f"[SELF-EVOLVE] {papers_since_merge} papers since last merge review ({total} total) "
+            f"— review model system for merges. "
             f"Run: python run.py model self-assess"
         )
+        state["last_merge_review"] = datetime.now().isoformat()
 
     if suggestions:
         state["pending_suggestions"] = suggestions
@@ -143,16 +150,15 @@ def _update_index(mdir: Path):
     )
 
 
-def _papers_since(last_check_str: str, state: dict) -> int:
-    """Count papers added since the last check."""
+def _papers_since(last_check_str: str | None, state: dict) -> int:
+    """Count papers added since the last check timestamp.
+
+    Uses the papers_added_since counter tracked in state, or falls back
+    to total papers if no last check timestamp exists.
+    """
     if not last_check_str:
         return state.get("papers_analyzed_total", 0)
-    try:
-        last_dt = datetime.fromisoformat(last_check_str)
-        # Approximate: return current total as a proxy
-        return state.get("papers_analyzed_total", 0)
-    except Exception:
-        return state.get("papers_analyzed_total", 0)
+    return state.get("papers_since_" + last_check_str[:10].replace("-", ""), 0)
 
 
 def self_assess(model_dir=None):
@@ -279,7 +285,7 @@ def compute_confidence(papers: list, consistency: float = 0.0) -> float:
 
 # --- Dedup helpers ---
 
-SIMILARITY_THRESHOLD = 0.60
+SIMILARITY_THRESHOLD = 0.70
 
 
 def _text_similarity(a: str, b: str) -> float:
