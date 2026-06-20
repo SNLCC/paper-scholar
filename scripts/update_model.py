@@ -27,10 +27,227 @@ import json
 import math
 import shutil
 import sys
+from difflib import SequenceMatcher
 from datetime import datetime
 from pathlib import Path
 
 DEFAULT_MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
+
+STATE_FILE = DEFAULT_MODEL_DIR.parent / ".skill_state.json"
+
+
+def _load_state() -> dict:
+    """Load skill evolution state."""
+    if STATE_FILE.exists():
+        try:
+            return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {
+        "skill_version": "1.0.0",
+        "papers_analyzed_total": 0,
+        "models_count": 0,
+        "last_prune_check": None,
+        "last_self_assessment": None,
+        "evolution_log": [],
+        "thresholds": {
+            "prune_suggest_every": 5,
+            "deep_prune_every": 15,
+            "model_merge_review_every": 30,
+            "self_assess_every": 10
+        },
+        "pending_suggestions": []
+    }
+
+
+def _save_state(state: dict):
+    """Persist skill evolution state."""
+    state["updated"] = datetime.now().isoformat()
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _check_evolution(model_dir: Path | None = None):
+    """Check if the skill should suggest self-improvements after adding a paper.
+
+    Called automatically after each add_analysis. Suggests:
+      - Pruning after every N papers
+      - Deep pruning after more papers
+      - Model merge review after many papers
+    Returns a list of suggestion strings (also printed to stderr).
+    """
+    state = _load_state()
+    total = state.get("papers_analyzed_total", 0)
+    thresholds = state.get("thresholds", {})
+    suggestions = []
+
+    last_prune = state.get("last_prune_check")
+    prune_every = thresholds.get("prune_suggest_every", 5)
+    if total > 0 and total % prune_every == 0:
+        if not last_prune or _papers_since(last_prune, state) >= prune_every:
+            suggestions.append(
+                f"[SELF-EVOLVE] You have analyzed {total} papers. "
+                f"Consider running: python run.py model prune <model_id> to remove low-frequency patterns."
+            )
+            state["last_prune_check"] = datetime.now().isoformat()
+
+    deep_prune_every = thresholds.get("deep_prune_every", 15)
+    if total > 0 and total % deep_prune_every == 0:
+        suggestions.append(
+            f"[SELF-EVOLVE] {total} papers analyzed — time for a deep prune + snapshot. "
+            f"Run: python run.py model snapshot <model_id> then prune."
+        )
+
+    merge_every = thresholds.get("model_merge_review_every", 30)
+    if total > 0 and total % merge_every == 0:
+        suggestions.append(
+            f"[SELF-EVOLVE] {total} papers — review model system for merges. "
+            f"Run: python run.py model self-assess"
+        )
+
+    if suggestions:
+        state["pending_suggestions"] = suggestions
+        for s in suggestions:
+            print(s, file=sys.stderr)
+
+    _save_state(state)
+    return suggestions
+
+
+def _update_index(mdir: Path):
+    """Update models/index.json with current model summaries."""
+    index = {
+        "updated": datetime.now().isoformat(),
+        "total_models": 0,
+        "total_papers": 0,
+        "models": {}
+    }
+    for f in sorted(mdir.glob("*.json")):
+        if f.name in ("index.json",):
+            continue
+        try:
+            model = json.loads(f.read_text(encoding="utf-8"))
+            index["models"][f.stem] = {
+                "label": model.get("label", ""),
+                "papers_count": len(model.get("papers_analyzed", [])),
+                "confidence": model.get("confidence", 0),
+                "type_family": model.get("type_family", "unknown"),
+                "type_signature": model.get("type_signature", ""),
+            }
+            index["total_papers"] += len(model.get("papers_analyzed", []))
+        except Exception:
+            continue
+    index["total_models"] = len(index["models"])
+    (mdir / "index.json").write_text(
+        json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def _papers_since(last_check_str: str, state: dict) -> int:
+    """Count papers added since the last check."""
+    if not last_check_str:
+        return state.get("papers_analyzed_total", 0)
+    try:
+        last_dt = datetime.fromisoformat(last_check_str)
+        # Approximate: return current total as a proxy
+        return state.get("papers_analyzed_total", 0)
+    except Exception:
+        return state.get("papers_analyzed_total", 0)
+
+
+def self_assess(model_dir=None):
+    """Run self-assessment: review model system, suggest merges, check health."""
+    mdir = Path(model_dir) if model_dir else DEFAULT_MODEL_DIR
+    state = _load_state()
+
+    print("=== paper-scholar Self-Assessment ===")
+    print(f"Total papers analyzed: {state.get('papers_analyzed_total', 0)}")
+    print(f"Models in library: {state.get('models_count', 0)}")
+    print()
+
+    # List all models with their stats
+    models_info = []
+    for f in sorted(mdir.glob("*.json")):
+        if f.name in ("index.json",):
+            continue
+        try:
+            model = json.loads(f.read_text(encoding="utf-8"))
+            papers = len(model.get("papers_analyzed", []))
+            conf = model.get("confidence", 0)
+            models_info.append((f.stem, papers, conf, model))
+        except Exception:
+            continue
+
+    if not models_info:
+        print("No models found. Start by analyzing some papers.")
+        return
+
+    print(f"{'Model ID':<35} {'Papers':<8} {'Conf':<8}")
+    print("-" * 55)
+    for mid, papers, conf, _ in models_info:
+        print(f"{mid:<35} {papers:<8} {conf:<8.3f}")
+
+    print()
+
+    # Check for similar models that could be merged
+    suggestions = []
+    for i, (mid_a, _, _, model_a) in enumerate(models_info):
+        for j, (mid_b, _, _, model_b) in enumerate(models_info):
+            if j <= i:
+                continue
+            sim = _structural_similarity(model_a, model_b)
+            if sim >= 0.6:
+                suggestions.append(
+                    f"Models '{mid_a}' and '{mid_b}' have {sim:.0%} structural similarity "
+                    f"— consider merging."
+                )
+
+    if suggestions:
+        print("Suggested merges:")
+        for s in suggestions[:5]:
+            print(f"  - {s}")
+        print()
+
+    # Check for low-confidence models
+    low_conf = [(mid, papers, conf) for mid, papers, conf, _ in models_info if conf < 0.2 and papers > 0]
+    if low_conf:
+        print("Low-confidence models (may need more papers):")
+        for mid, papers, conf in low_conf:
+            print(f"  - {mid}: conf={conf:.3f} from {papers} papers")
+        print()
+
+    # Update state
+    state["models_count"] = len(models_info)
+    state["last_self_assessment"] = datetime.now().isoformat()
+    _save_state(state)
+
+    print("Self-assessment complete. Review suggestions above and decide on actions.")
+
+
+def evolution_status(model_dir=None):
+    """Show current evolution state of the skill."""
+    state = _load_state()
+    print("=== paper-scholar Evolution Status ===")
+    print(f"Version: {state.get('skill_version', '?')}")
+    print(f"Papers analyzed: {state.get('papers_analyzed_total', 0)}")
+    print(f"Models: {state.get('models_count', 0)}")
+    print(f"Last prune check: {state.get('last_prune_check', 'never')}")
+    print(f"Last self-assessment: {state.get('last_self_assessment', 'never')}")
+    print()
+
+    pending = state.get("pending_suggestions", [])
+    if pending:
+        print("Pending suggestions:")
+        for s in pending:
+            print(f"  - {s}")
+    else:
+        print("No pending suggestions.")
+
+    log = state.get("evolution_log", [])
+    if log:
+        print(f"\nRecent evolution events ({len(log)}):")
+        for entry in log[-5:]:
+            print(f"  [{entry.get('time', '?')[:10]}] {entry.get('event', '?')}")
 
 
 def _mdir(model_dir: str | None) -> Path:
@@ -62,12 +279,28 @@ def compute_confidence(papers: list, consistency: float = 0.0) -> float:
 
 # --- Dedup helpers ---
 
+SIMILARITY_THRESHOLD = 0.60
+
+
+def _text_similarity(a: str, b: str) -> float:
+    """Compute similarity ratio between two strings using SequenceMatcher.
+
+    Uses SequenceMatcher rather than substring matching to avoid false merges.
+    Examples:
+      "建立研究合法性" vs "建立研究的合法性" -> ~0.88 (correctly similar)
+      "研究" vs "研究合法性" -> ~0.50 (not similar enough to merge)
+      "苹果" vs "香蕉" -> 0.0 (completely different)
+    """
+    return SequenceMatcher(None, a, b).ratio()
+
+
 def _find_similar_section(sections: list, new_sec: dict) -> int | None:
     nf = new_sec.get("rhetorical_function", "").strip().lower()
     for i, s in enumerate(sections):
         ef = s.get("rhetorical_function", "").strip().lower()
-        if nf and ef and (nf == ef or nf in ef or ef in nf):
-            return i
+        if nf and ef:
+            if nf == ef or _text_similarity(nf, ef) >= SIMILARITY_THRESHOLD:
+                return i
     return None
 
 
@@ -75,8 +308,9 @@ def _find_similar_device(devices: list, new_dev: dict) -> int | None:
     nn = new_dev.get("device", "").strip().lower()
     for i, d in enumerate(devices):
         en = d.get("device", "").strip().lower()
-        if nn and en and (nn == en or nn in en or en in nn):
-            return i
+        if nn and en:
+            if nn == en or _text_similarity(nn, en) >= SIMILARITY_THRESHOLD:
+                return i
     return None
 
 
@@ -443,6 +677,8 @@ def main():
     p_report = sub.add_parser("report")
     p_report.add_argument("model_id")
     p_report.add_argument("--output", "-o", help="Output markdown file")
+    sub.add_parser("self-assess", help="Run self-assessment of model system")
+    sub.add_parser("evolution-status", help="Show skill evolution state")
 
     args = parser.parse_args()
 
@@ -458,6 +694,8 @@ def main():
         "export": lambda: export_model(args.model_id, args.output_path, args.model_dir),
         "import": lambda: import_model(args.input_path, args.model_dir),
         "report": lambda: report_model(args.model_id, args.output, args.model_dir),
+        "self-assess": lambda: self_assess(args.model_dir),
+        "evolution-status": lambda: evolution_status(args.model_dir),
     }
     fn = cmds.get(args.command)
     if fn:

@@ -299,7 +299,7 @@ class NutstoreWebDAV:
     def _propfind_xml(self, path: str) -> str:
         """WebDAV PROPFIND to list a directory."""
         url = urljoin(self.base, path.lstrip("/"))
-        body = b'<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:getcontentlength/><d:getcontenttype/><d:getlastmodified/></d:prop></d:propfind>'
+        body = b'<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:getcontentlength/><d:getcontenttype/><d:getlastmodified/><d:resourcetype/></d:prop></d:propfind>'
         req = urllib.request.Request(url, data=body, method="PROPFIND", headers={
             "Authorization": self.auth_header,
             "Depth": "1",
@@ -328,7 +328,19 @@ class NutstoreWebDAV:
             size = resp_elem.findtext(".//D:getcontentlength", "0", ns)
             mtime = resp_elem.findtext(".//D:getlastmodified", "", ns)
             content_type = resp_elem.findtext(".//D:getcontenttype", "", ns)
-            is_dir = content_type == "httpd/unix-directory" if content_type else (size == "0")
+            # Determine if directory: check resourcetype first, then content-type,
+            # then trailing slash in href, and only as last resort check size.
+            # Nutstore may report non-zero sizes for directories, so size=="0" is unreliable.
+            resource_type_elem = resp_elem.find(".//D:resourcetype", ns)
+            is_collection = False
+            if resource_type_elem is not None:
+                is_collection = resource_type_elem.find("D:collection", ns) is not None
+            is_dir = (
+                is_collection or
+                (content_type == "httpd/unix-directory" if content_type else False) or
+                (href.rstrip("/") != href) or  # href ends with /
+                (not content_type and size == "0")  # last resort
+            )
             items.append({
                 "href": href,
                 "name": name or Path(href).name,

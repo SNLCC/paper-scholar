@@ -36,6 +36,8 @@ Usage:
     python run.py model report <model_id> [--output <md>]  # Human-readable report
     python run.py model export <mid> <path>                # Export model
     python run.py model import <path>                      # Import model
+    python run.py model self-assess                        # Self-assessment
+    python run.py model evolution-status                   # Evolution state
     python run.py prescribe list                           # List prescriptions
     python run.py prescribe add <prescription.json>        # Add prescription
     python run.py prescribe recommend <chapter_type>       # Get recommendations
@@ -183,7 +185,8 @@ def main():
     p_model = sub.add_parser("model", help="Model management")
     p_model.add_argument("action", choices=[
         "add", "list", "show", "match", "prune", "snapshot",
-        "rollback", "detect-conflict", "report", "export", "import"
+        "rollback", "detect-conflict", "report", "export", "import",
+        "self-assess", "evolution-status"
     ], help="Model action")
     p_model.add_argument("args", nargs=argparse.REMAINDER, help="Action arguments")
 

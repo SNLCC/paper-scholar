@@ -19,3 +19,8 @@ prescriptions/
 # Python cache
 __pycache__/
 *.pyc
+# Auto-generated model index (regenerated on each model update)
+models/index.json
+
+# Skill self-evolution state (user-specific)
+.skill_state.json

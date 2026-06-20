@@ -8,14 +8,12 @@
   "papers_analyzed": [],
   "papers_count": 0,
   "confidence": 0.0,
-
   "argumentation_model": {
     "classification_frameworks": [],
     "argumentation_structures": [],
     "position_differentiations": [],
     "confidence": 0.0
   },
-
   "writing_pattern_model": {
     "introduction_function_sequences": [],
     "body_organization_principles": [],
@@ -23,7 +21,6 @@
     "synthesis_paragraph_patterns": [],
     "confidence": 0.0
   },
-
   "concept_usage_model": {
     "concept_definitions": [],
     "concept_operationalization_patterns": [],
@@ -31,5 +28,37 @@
     "title_expression_patterns": [],
     "section_title_patterns": [],
     "confidence": 0.0
+  },
+  "chapter_templates": {
+    "introduction": {
+      "purpose": "",
+      "internal_arc": "",
+      "common_moves": []
+    },
+    "literature_review": {
+      "purpose": "",
+      "internal_arc": "",
+      "common_moves": []
+    },
+    "methodology": {
+      "purpose": "",
+      "internal_arc": "",
+      "common_moves": []
+    },
+    "analysis": {
+      "purpose": "",
+      "internal_arc": "",
+      "common_moves": []
+    },
+    "discussion": {
+      "purpose": "",
+      "internal_arc": "",
+      "common_moves": []
+    },
+    "conclusion": {
+      "purpose": "",
+      "internal_arc": "",
+      "common_moves": []
+    }
   }
 }
