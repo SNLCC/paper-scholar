@@ -11,7 +11,11 @@ models/archive/
 *.txt
 
 # Accumulated paper data (may contain copyrighted content)
-data/
+# Exclude user-generated analysis data, but track sample/template files
+data/*.json
+!data/samples/
+data/samples/*.json
+!data/README.md
 
 # Prescriptions (can be regenerated from models)
 prescriptions/

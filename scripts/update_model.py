@@ -117,6 +117,7 @@ def _check_evolution(model_dir: Path | None = None):
         for s in suggestions:
             print(s, file=sys.stderr)
 
+    state["papers_at_last_check"] = total
     _save_state(state)
     return suggestions
 
@@ -153,12 +154,14 @@ def _update_index(mdir: Path):
 def _papers_since(last_check_str: str | None, state: dict) -> int:
     """Count papers added since the last check timestamp.
 
-    Uses the papers_added_since counter tracked in state, or falls back
-    to total papers if no last check timestamp exists.
+    Simple implementation: if no last check, return total papers.
+    Otherwise return papers added since the last known total at check time.
     """
     if not last_check_str:
         return state.get("papers_analyzed_total", 0)
-    return state.get("papers_since_" + last_check_str[:10].replace("-", ""), 0)
+    total = state.get("papers_analyzed_total", 0)
+    last_total = state.get("papers_at_last_check", 0)
+    return total - last_total
 
 
 def self_assess(model_dir=None):
@@ -429,6 +432,16 @@ def add_analysis(analysis_path: str, model_dir=None):
         p = _path(mdir, mid)
         p.write_text(json.dumps(model, indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"Created '{mid}' (sig: {sig})")
+
+        # Update skill evolution state
+        state = _load_state()
+        state["papers_analyzed_total"] = state.get("papers_analyzed_total", 0) + 1
+        _save_state(state)
+        # Trigger self-evolution check
+        _check_evolution(mdir)
+        # Update model index
+        _update_index(mdir)
+
         return mid
 
 

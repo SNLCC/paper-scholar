@@ -247,6 +247,20 @@ def compare(analysis_path: str, annotations_path: str, learnings_dir: str | None
         "learning_points": learning_points,
     }
 
+    # Determine learning direction: does skill learn from user, or does user learn from skill?
+    learning_direction = []
+    if metrics["user_annotations"] > 0 and metrics["skill_annotations"] > 0:
+        # If user has more annotations than skill coverage on overlapping pages, user may be more thorough
+        if metrics["user_annotations_high_overlap"] > metrics["user_annotations_low_overlap"]:
+            learning_direction.append("user_aligned: skill and user agree on most pages")
+        if metrics["user_only_pages"] > 0:
+            learning_direction.append(f"skill_blindspot: {metrics['user_only_pages']} pages user annotated but skill missed")
+        if metrics["skill_only_pages"] > 0:
+            learning_direction.append(f"user_blindspot: {metrics['skill_only_pages']} pages skill covered but user didn't annotate")
+    elif metrics["user_annotations"] == 0:
+        learning_direction.append("no_user_annotations: skill analysis stands alone, no user data to learn from")
+    report["learning_direction"] = learning_direction
+
     dest = ldir / f"{paper_id}.json"
     dest.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"Comparison saved -> {dest}")

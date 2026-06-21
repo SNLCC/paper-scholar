@@ -43,6 +43,9 @@ Usage:
     python run.py prescribe recommend <chapter_type>       # Get recommendations
     python run.py prescribe upgrade <prescription_id>      # Upgrade confidence
     python run.py welcome                                    # Show getting-started guide
+    python run.py reproduce recall <paper_id>               # Recall paper skeleton
+    python run.py reproduce list                            # List stored papers
+    python run.py reproduce search <keyword>                # Search papers
 """
 
 import argparse
@@ -126,7 +129,10 @@ def _run(script: str, args: list[str]):
 
 def cmd_install():
     """Install to Codex skills directory (auto-detects install vs update)."""
-    _run("install.py", [])
+    import subprocess
+    install_script = Path(__file__).resolve().parent / "install.py"
+    result = subprocess.run([sys.executable, str(install_script)])
+    sys.exit(result.returncode)
 
 
 def main():
@@ -201,6 +207,15 @@ def main():
     p_pu = p_pres_sub.add_parser("upgrade", help="Upgrade confidence")
     p_pu.add_argument("prescription_id")
 
+    # --- reproduce ---
+    p_repro = sub.add_parser("reproduce", help="Recall paper skeleton from memory")
+    p_repro_sub = p_repro.add_subparsers(dest="reproduce_command")
+    p_rr = p_repro_sub.add_parser("recall", help="Recall a paper")
+    p_rr.add_argument("paper_id")
+    p_repro_sub.add_parser("list", help="List stored papers")
+    p_rs = p_repro_sub.add_parser("search", help="Search papers")
+    p_rs.add_argument("keyword")
+
     # --- welcome ---
     sub.add_parser("welcome", help="Show getting-started guide")
 
@@ -269,6 +284,14 @@ def main():
         elif args.prescribe_command == "upgrade":
             _run("update_prescription.py", ["upgrade", args.prescription_id])
 
+    elif cmd == "reproduce":
+        if args.reproduce_command == "recall":
+            _run("reproduce_paper.py", ["recall", args.paper_id])
+        elif args.reproduce_command == "list":
+            _run("reproduce_paper.py", ["list"])
+        elif args.reproduce_command == "search":
+            _run("reproduce_paper.py", ["search", args.keyword])
+
     elif cmd == "welcome":
         cmd_welcome()
 
@@ -276,7 +299,11 @@ def main():
         cmd_install()
 
     elif cmd == "update":
-        _run("install.py", [])
+        import subprocess
+        install_script = Path(__file__).resolve().parent / "install.py"
+        extra = ["--force"] if getattr(args, 'force', False) else []
+        result = subprocess.run([sys.executable, str(install_script)] + extra)
+        sys.exit(result.returncode)
 
     else:
         parser.print_help()

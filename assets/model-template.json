@@ -30,45 +30,14 @@
     "confidence": 0.0
   },
   "chapter_templates": {
-    "academic_review": {
-      "overall_structure": {
-        "sections": [
-          {
-            "position": 1,
-            "function": ""
-          },
-          {
-            "position": 2,
-            "function": ""
-          },
-          {
-            "position": 3,
-            "function": ""
-          },
-          {
-            "position": 4,
-            "function": ""
-          },
-          {
-            "position": 5,
-            "function": ""
-          }
-        ]
-      },
-      "position_criteria": {},
-      "common_errors": [],
-      "evaluation_criteria": []
-    },
-    "introduction": {
-      "purpose": "",
-      "internal_arc": "",
-      "common_moves": []
-    }
+    "_note": "章节模板从实际论文中提炼，非预设固化。以下为初始占位，随论文类型增加而丰富。",
+    "templates": {}
   },
   "verification_required": true,
   "reproduction": {
     "core_argument_summary": "",
     "key_quotes": [],
     "annotation_threads": []
-  }
+  },
+  "paper_type": "auto"
 }
