@@ -275,8 +275,8 @@ def upgrade(prescription_id: str, prescription_dir: str | None = None):
 
 def main():
     parser = argparse.ArgumentParser(description="Writing guidance management")
-    parser.add_argument("--prescription-dir", help="Prescriptions directory")
-    parser.add_argument("--model-dir", help="Model directory")
+    parser.add_argument("--prescription-dir", help=f"Prescription directory (default: {DEFAULT_PRESCRIPTION_DIR})")
+    parser.add_argument("--model-dir", help=f"Model directory (default: {DEFAULT_MODEL_DIR})")
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("list")

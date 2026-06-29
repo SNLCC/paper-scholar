@@ -63,6 +63,10 @@ description: >
 开始前：
   python install.py   # 装依赖 + 注册到 Codex，已装则自动检查更新
 
+数据目录说明：
+  精读成果、模型库、学习记录等积累数据存储在项目目录的 .paper-scholar/ 下。
+  如需自定义，设置环境变量：export PAPER_SCHOLAR_DATA_DIR=/path/to/data
+
 然后告诉我你想做什么。
 """
 
@@ -264,6 +268,9 @@ python scripts/update_model.py rollback <model_id> <snapshot_id>
 所有操作通过统一入口 `run.py` 调用：
 
 ```bash
+# 指定数据目录（默认 .paper-scholar/）
+python run.py --data-dir /path/to/data <command>
+
 # 获取论文
 python run.py extract paper.pdf --output paper.txt
 python run.py fetch local items --collection <key>

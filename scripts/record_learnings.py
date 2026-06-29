@@ -14,9 +14,9 @@ import argparse
 import json
 import sys
 from datetime import datetime
-from pathlib import Path
+from _paths import learnings_dir as _learnings_dir
 
-DEFAULT_LEARNINGS_DIR = Path(__file__).resolve().parent.parent / ".learnings"
+DEFAULT_LEARNINGS_DIR = _learnings_dir()
 
 # 21-tag annotation library (L1: label definition)
 # From references/annotation-tags.md — built from actual paper reading,

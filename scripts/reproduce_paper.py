@@ -16,10 +16,10 @@ import argparse
 import json
 import sys
 from datetime import datetime
-from pathlib import Path
+from _paths import data_dir as _data_dir, models_dir as _models_dir, learnings_dir as _learnings_dir
 
-DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-DEFAULT_MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
+DEFAULT_DATA_DIR = _data_dir()
+DEFAULT_MODEL_DIR = _models_dir()
 
 
 def _ddir(data_dir: str | None) -> Path:
@@ -134,7 +134,7 @@ def recall(paper_id: str, data_dir: str | None = None, model_dir: str | None = N
         print("  (no key quotes marked)")
 
     # Annotation threads (from .learnings/)
-    learnings_file = Path(__file__).resolve().parent.parent / ".learnings" / f"{paper_id}.json"
+    learnings_file = _learnings_dir() / f"{paper_id}.json"
     if learnings_file.exists():
         try:
             learnings = json.loads(learnings_file.read_text(encoding="utf-8"))

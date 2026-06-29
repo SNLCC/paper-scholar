@@ -49,9 +49,14 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 import textwrap
 from pathlib import Path
+
+from scripts._paths import data_root
+
+_GLOBAL_DATA_DIR: str | None = None
 
 
 WELCOME_TEXT = """
@@ -90,7 +95,11 @@ paper-scholar 是一个学术论文精读与写作辅助工具。它可以：
 第四步：需要写作指导时
   python run.py prescribe recommend introduction
 
-第四步：更新
+--- 数据目录 ---
+积累数据存储在项目目录的 .paper-scholar/ 下
+  自定义：export PAPER_SCHOLAR_DATA_DIR=/path/to/data
+
+--- 更新 ---
   python install.py   # 自动检测新版本，保留用户数据
 
 查看所有命令：
@@ -123,7 +132,10 @@ def _run(script: str, args: list[str]):
     import subprocess
     script_path = SCRIPTS_DIR / script
     cmd = [sys.executable, str(script_path)] + args
-    result = subprocess.run(cmd)
+    env = os.environ.copy()
+    if _GLOBAL_DATA_DIR:
+        env["PAPER_SCHOLAR_DATA_DIR"] = _GLOBAL_DATA_DIR
+    result = subprocess.run(cmd, env=env)
     sys.exit(result.returncode)
 
 
@@ -131,7 +143,10 @@ def cmd_install():
     """Install to Codex skills directory (auto-detects install vs update)."""
     import subprocess
     install_script = Path(__file__).resolve().parent / "install.py"
-    result = subprocess.run([sys.executable, str(install_script)])
+    env = os.environ.copy()
+    if _GLOBAL_DATA_DIR:
+        env["PAPER_SCHOLAR_DATA_DIR"] = _GLOBAL_DATA_DIR
+    result = subprocess.run([sys.executable, str(install_script)], env=env)
     sys.exit(result.returncode)
 
 
@@ -139,6 +154,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="paper-scholar — paper reading and writing assistant"
     )
+    parser.add_argument("--data-dir", help=f"Data root (default: {data_root()})")
     sub = parser.add_subparsers(dest="command")
 
     # --- extract ---
@@ -227,6 +243,9 @@ def main():
     p_update.add_argument("--force", action="store_true", help="Force update even if same version")
 
     args = parser.parse_args()
+    global _GLOBAL_DATA_DIR
+    _GLOBAL_DATA_DIR = args.data_dir
+
     cmd = args.command
 
     if cmd == "extract":

@@ -17,7 +17,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+from _paths import data_dir as _data_dir
+
+DEFAULT_DATA_DIR = _data_dir()
 
 
 def _resolve_dir(data_dir: str | None) -> Path:
@@ -87,7 +89,7 @@ def show_paper(paper_id: str, data_dir: str | None = None):
 
 def main():
     parser = argparse.ArgumentParser(description="Store and manage accumulated paper data")
-    parser.add_argument("--data-dir", help="Data directory (default: data/)")
+    parser.add_argument("--data-dir", help=f"Data directory (default: {DEFAULT_DATA_DIR})")
     sub = parser.add_subparsers(dest="command")
 
     p_store = sub.add_parser("store", help="Store an analysis JSON")

@@ -29,11 +29,11 @@ import shutil
 import sys
 from difflib import SequenceMatcher
 from datetime import datetime
-from pathlib import Path
+from _paths import models_dir as _models_dir, state_file as _state_file
 
-DEFAULT_MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
+DEFAULT_MODEL_DIR = _models_dir()
 
-STATE_FILE = DEFAULT_MODEL_DIR.parent / ".skill_state.json"
+STATE_FILE = _state_file()
 
 
 def _load_state() -> dict:

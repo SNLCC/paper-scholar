@@ -6,7 +6,7 @@
 
 自动判断：
   - 未安装 → 安装
-  - 已安装 + 有新版 → 更新（保留用户数据）
+  - 已安装 + 有新版 → 更新
   - 已安装 + 已是最新版 → 跳过
 """
 
@@ -28,9 +28,9 @@ GITHUB_USER = "SNLCC"
 REPO_NAME = "paper-scholar"
 BRANCH = "main"
 
-# 用户数据目录——更新时必须保留
-USER_DATA_DIRS = {"models", "data", ".learnings", "prescriptions"}
-USER_DATA_FILES = {".skill_state.json"}
+# 用户数据（data/ models/ .learnings/ prescriptions/ .skill_state.json）
+# 现在位于用户项目目录的 .paper-scholar/ 下（由 PAPER_SCHOLAR_DATA_DIR 或 _paths.py 控制），
+# 不再位于 skill 自身目录，因此更新时无需备份恢复。
 
 
 def _version_from_path(path: Path) -> str:
@@ -122,18 +122,7 @@ def _do_install(target: Path):
 
 
 def _do_update(target: Path):
-    """执行更新（保留用户数据）"""
-    # 1. 备份用户数据
-    backup_dir = Path(tempfile.mkdtemp(prefix="ps-backup-"))
-    for dirname in USER_DATA_DIRS:
-        src = target / dirname
-        if src.exists():
-            try:
-                shutil.copytree(str(src), str(backup_dir / dirname))
-            except Exception:
-                pass
-
-    # 2. 下载新版并替换
+    """执行更新（直接替换 skill 文件，用户数据在项目目录下不受影响）"""
     with tempfile.TemporaryDirectory(prefix="ps-update-") as tmp:
         new_project = _extract_zip(_download_zip(), Path(tmp))
         new_ver = _version_from_path(new_project)
@@ -145,20 +134,10 @@ def _do_update(target: Path):
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git")
         )
 
-        # 3. 恢复用户数据
-        for dirname in USER_DATA_DIRS:
-            src = backup_dir / dirname
-            if src.exists():
-                dst = target / dirname
-                if dst.exists():
-                    shutil.rmtree(dst)
-                shutil.copytree(str(src), str(dst))
-
         _install_deps(target)
 
-    shutil.rmtree(backup_dir, ignore_errors=True)
     print(f"  paper-scholar 已更新到 v{new_ver}")
-    print(f"  用户数据（模型/批注/论文/写作指导）已保留。")
+    print(f"  用户数据（模型/批注/论文/写作指导）位于项目目录 .paper-scholar/，不受影响。")
 
 
 def main():

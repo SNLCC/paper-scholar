@@ -45,6 +45,19 @@ python run.py model add analysis.json
 python run.py --help
 ```
 
+### 数据目录
+
+精读成果、模型库、批注学习记录等用户数据存储在项目目录的 `.paper-scholar/` 下（可通过 `PAPER_SCHOLAR_DATA_DIR` 环境变量自定义路径）。
+
+```bash
+# 自定义数据目录
+export PAPER_SCHOLAR_DATA_DIR=/path/to/your/data
+python run.py data list      # 查看论文存档
+python run.py model list     # 查看模型库
+```
+
+> **注意**：这些数据现在位于项目目录而非 skill 安装目录，因此 skill 更新时不会影响你的积累。如果你之前有旧版本的数据（在 `~/.codex/skills/paper-scholar/data/` 等位置），请手动迁移到新位置。
+
 ---
 
 ## 工作流
