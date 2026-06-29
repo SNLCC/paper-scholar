@@ -92,6 +92,11 @@ def _get_target_dir() -> Path:
     codex_home = os.environ.get("CODEX_HOME", "")
     if codex_home:
         return Path(codex_home) / "skills" / "paper-scholar"
+    # Project-local override: if cwd has .codex/skills/, install there.
+    # This lets the same install.py work for both global and per-project installs.
+    cwd_skills = Path.cwd() / ".codex" / "skills"
+    if cwd_skills.is_dir():
+        return cwd_skills / "paper-scholar"
     return Path.home() / ".codex" / "skills" / "paper-scholar"
 
 
