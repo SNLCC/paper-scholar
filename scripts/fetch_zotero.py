@@ -141,12 +141,21 @@ class ZoteroLocal:
     def __init__(self):
         self.base = ZOTERO_LOCAL_API
 
+    def _user_prefix(self) -> str:
+        """Zotero local API uses user 0 for the local database."""
+        return "users/0"
+
     def _get(self, path: str) -> list | dict:
         url = urljoin(self.base, path.lstrip("/"))
         req = urllib.request.Request(url, headers={"Zotero-API-Version": "3"})
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            print(f"HTTP {e.code} from {url}: {e.reason}", file=sys.stderr)
+            if e.code == 404:
+                print("Check that the item/collection key is correct.", file=sys.stderr)
+            sys.exit(1)
         except urllib.error.URLError as e:
             print(f"Error: cannot reach Zotero at {url}", file=sys.stderr)
             print("Make sure Zotero is running.", file=sys.stderr)
@@ -156,19 +165,19 @@ class ZoteroLocal:
             sys.exit(1)
 
     def collections(self) -> list[dict]:
-        data = self._get("collections")
+        data = self._get(f"{self._user_prefix()}/collections")
         return data if isinstance(data, list) else []
 
     def items(self, collection_key: str | None = None, limit: int = 100) -> list[dict]:
         if collection_key:
-            path = f"collections/{collection_key}/items/top?limit={limit}"
+            path = f"{self._user_prefix()}/collections/{collection_key}/items/top?limit={limit}"
         else:
-            path = f"items/top?limit={limit}"
+            path = f"{self._user_prefix()}/items/top?limit={limit}"
         data = self._get(path)
         return data if isinstance(data, list) else []
 
     def item_children(self, item_key: str) -> list[dict]:
-        data = self._get(f"items/{item_key}/children")
+        data = self._get(f"{self._user_prefix()}/items/{item_key}/children")
         return data if isinstance(data, list) else []
 
     def annotations(self, item_key: str) -> list[dict]:
@@ -383,7 +392,7 @@ def cmd_local(args):
         _print_items(items)
 
     elif args.command2 == "item":
-        item_data = z._get(f"items/{args.item_key}")
+        item_data = z._get(f"{z._user_prefix()}/items/{args.item_key}")
         item = item_data[0] if isinstance(item_data, list) and item_data else item_data
         anns = z.annotations(args.item_key) if args.annotations else None
         _print_item_detail(item, anns)
