@@ -29,6 +29,7 @@ import shutil
 import sys
 from difflib import SequenceMatcher
 from datetime import datetime
+from pathlib import Path
 from _paths import models_dir as _models_dir, state_file as _state_file
 
 DEFAULT_MODEL_DIR = _models_dir()

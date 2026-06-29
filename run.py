@@ -321,7 +321,10 @@ def main():
         import subprocess
         install_script = Path(__file__).resolve().parent / "install.py"
         extra = ["--force"] if getattr(args, 'force', False) else []
-        result = subprocess.run([sys.executable, str(install_script)] + extra)
+        env = os.environ.copy()
+        if _GLOBAL_DATA_DIR:
+            env["PAPER_SCHOLAR_DATA_DIR"] = _GLOBAL_DATA_DIR
+        result = subprocess.run([sys.executable, str(install_script)] + extra, env=env)
         sys.exit(result.returncode)
 
     else:
