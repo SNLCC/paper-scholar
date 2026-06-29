@@ -27,6 +27,11 @@ def _resolve_root() -> Path:
     return root.resolve()
 
 
+def data_root() -> Path:
+    """Return the resolved data root directory."""
+    return _resolve_root()
+
+
 def data_dir() -> Path:
     d = _resolve_root() / "data"
     d.mkdir(parents=True, exist_ok=True)
