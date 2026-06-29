@@ -19,8 +19,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-DEFAULT_PRESCRIPTION_DIR = Path(__file__).resolve().parent.parent / "prescriptions"
-DEFAULT_MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
+from _paths import prescriptions_dir as _prescriptions_dir, models_dir as _models_dir
+
+DEFAULT_PRESCRIPTION_DIR = _prescriptions_dir()
+DEFAULT_MODEL_DIR = _models_dir()
 
 
 def _pdir(prescription_dir: str | None) -> Path:
