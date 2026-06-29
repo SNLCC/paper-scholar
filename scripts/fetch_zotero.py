@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """fetch_zotero.py — ..."""
 
-# Handle terminal encoding gracefully: if stdout is not UTF-8,
-# use the terminal's native encoding with 'replace' to avoid crashes.
-# This ensures Chinese text displays correctly on Windows terminals (GBK).
+# Force stdout to UTF-8 so Chinese text displays correctly
+# on Windows terminals with GBK encoding.
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
     try:
-        sys.stdout.reconfigure(errors='replace')
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     except (AttributeError, ValueError):
         pass
 
@@ -47,6 +46,7 @@ import argparse
 import base64
 import json
 import os
+import platform
 import sys
 import urllib.request
 import urllib.error
@@ -60,6 +60,106 @@ from urllib.parse import urljoin
 ZOTERO_LOCAL_API = "http://localhost:23119/api/"
 ZOTERO_WEB_API = "https://api.zotero.org/"
 NUTSTORE_WEBDAV = "https://dav.jianguoyun.com/dav/"
+
+
+# ===================================================================
+#  Zotero path resolution helpers
+# ===================================================================
+
+def _find_zotero_data_dir() -> Path | None:
+    """Locate the Zotero data directory by checking platform-specific paths.
+    
+    Order of precedence:
+      1. ZOTERO_DATA_DIR environment variable
+      2. Windows: %APPDATA%\\Zotero\\Zotero\\Profiles\\*.default\\zotero\\
+      3. macOS: ~/Zotero/
+      4. Linux: ~/.zotero/zotero/*.default/zotero/
+    """
+    env_dir = os.environ.get("ZOTERO_DATA_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        if p.is_dir():
+            return p.resolve()
+
+    home = Path.home()
+
+    if platform.system() == "Windows":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            profiles_dir = Path(appdata) / "Zotero" / "Zotero" / "Profiles"
+            if profiles_dir.is_dir():
+                for profile in sorted(profiles_dir.iterdir()):
+                    zotero_dir = profile / "zotero"
+                    if zotero_dir.is_dir():
+                        return zotero_dir.resolve()
+        # Zotero 6 fallback
+        profiles_dir_6 = Path(appdata or "") / "Zotero" / "Profiles"
+        if profiles_dir_6.is_dir():
+            for profile in sorted(profiles_dir_6.iterdir()):
+                zotero_dir = profile / "zotero"
+                if zotero_dir.is_dir():
+                    return zotero_dir.resolve()
+
+    elif platform.system() == "Darwin":
+        for candidate in [home / "Zotero",
+                          home / "Library" / "Application Support" / "Zotero" / "Profiles"]:
+            if candidate.is_dir():
+                if candidate.name == "Zotero":
+                    return candidate.resolve()
+                for profile in sorted(candidate.iterdir()):
+                    zotero_dir = profile / "zotero"
+                    if zotero_dir.is_dir():
+                        return zotero_dir.resolve()
+
+    else:  # Linux and others
+        config_dir = home / ".zotero" / "zotero"
+        if config_dir.is_dir():
+            for profile in sorted(config_dir.iterdir()):
+                zotero_dir = profile / "zotero"
+                if zotero_dir.is_dir():
+                    return zotero_dir.resolve()
+
+    return None
+
+
+def _resolve_storage_path(raw_path: str, filename: str = "") -> str:
+    """Resolve a Zotero attachment path to an absolute filesystem path.
+    
+    Zotero returns paths in 'storage:XXXXX' format for items stored in
+    its internal storage (both imported_file and imported_url link modes).
+    This resolves that format against the real Zotero data directory.
+    
+    For linked_file attachments, raw_path is already an absolute path.
+    For linked_url attachments, returns raw_path as-is.
+    """
+    if not raw_path:
+        return ""
+
+    if not raw_path.startswith("storage:"):
+        return raw_path  # already absolute or a URL
+
+    storage_hash = raw_path[len("storage:"):]
+    if not storage_hash:
+        return raw_path
+
+    data_dir = _find_zotero_data_dir()
+    if not data_dir:
+        return raw_path
+
+    storage_dir = data_dir / "storage" / storage_hash
+    if not storage_dir.is_dir():
+        return raw_path
+
+    if filename:
+        candidate = storage_dir / filename
+        if candidate.is_file():
+            return str(candidate.resolve())
+
+    for f in sorted(storage_dir.iterdir()):
+        if f.suffix.lower() == ".pdf" and f.is_file():
+            return str(f.resolve())
+
+    return str(storage_dir.resolve())
 
 
 # ===================================================================
@@ -186,9 +286,21 @@ class ZoteroLocal:
     def pdf_attachment(self, item_key: str) -> dict | None:
         for c in self.item_children(item_key):
             d = c.get("data", {})
-            if d.get("itemType") == "attachment" and d.get("contentType") == "application/pdf":
-                return {"path": d.get("path", ""), "linkMode": d.get("linkMode"),
-                        "contentType": "application/pdf"}
+            if d.get("itemType") != "attachment":
+                continue
+            # Accept PDF by contentType or filename extension
+            ct = d.get("contentType", "")
+            fn = d.get("filename", "")
+            if ct != "application/pdf" and not fn.lower().endswith(".pdf"):
+                continue
+            raw_path = d.get("path", "")
+            resolved = _resolve_storage_path(raw_path, fn)
+            return {
+                "path": resolved,
+                "linkMode": d.get("linkMode", ""),
+                "contentType": ct or "application/pdf",
+                "filename": fn,
+            }
         return None
 
 
@@ -258,15 +370,21 @@ class ZoteroWeb:
     def pdf_attachment(self, item_key: str) -> dict | None:
         for c in self.item_children(item_key):
             d = c.get("data", {})
-            if d.get("itemType") == "attachment" and d.get("contentType") == "application/pdf":
-                # Web API may include a download link
-                return {
-                    "path": d.get("path", ""),
-                    "linkMode": d.get("linkMode"),
-                    "contentType": "application/pdf",
-                    "download_url": d.get("url") or d.get("filename", ""),
-                    "filename": d.get("filename", "paper.pdf"),
-                }
+            if d.get("itemType") != "attachment":
+                continue
+            ct = d.get("contentType", "")
+            fn = d.get("filename", "")
+            if ct != "application/pdf" and not fn.lower().endswith(".pdf"):
+                continue
+            raw_path = d.get("path", "")
+            resolved = _resolve_storage_path(raw_path, fn)
+            return {
+                "path": resolved,
+                "linkMode": d.get("linkMode", ""),
+                "contentType": ct or "application/pdf",
+                "filename": fn,
+                "download_url": d.get("url") or "",
+            }
         return None
 
 
@@ -399,8 +517,14 @@ def cmd_local(args):
         if args.pdf_path:
             att = z.pdf_attachment(args.item_key)
             if att:
-                print(f"PDF path: {att['path']}")
+                fn = att.get("filename", "")
+                label = f"PDF path: {att['path']}" + (f"  ({fn})" if fn else "")
+                print(label)
                 print(f"Link mode: {att.get('linkMode', '?')}")
+                # Warn if path couldn't be resolved
+                raw = att.get("path", "")
+                if raw.startswith("storage:") or (raw and not Path(raw).is_file()):
+                    print("  (set ZOTERO_DATA_DIR env var if path is wrong)")
             else:
                 print("No PDF attachment found.")
 
