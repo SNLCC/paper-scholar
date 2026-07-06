@@ -162,7 +162,16 @@ def main():
     p_extract.add_argument("pdf", help="PDF file path")
     p_extract.add_argument("--output", "-o", help="Output text file")
     p_extract.add_argument("--stdout", action="store_true", help="Print to stdout")
-    p_extract.add_argument("--engine", choices=["auto", "pdfplumber", "builtin"], default="auto")
+    p_extract.add_argument("--engine", choices=["auto", "local", "pymupdf", "pymupdf-v62", "pdfplumber", "pdfplumber-v62", "builtin", "mineru"], default="auto")
+
+    p_extract.add_argument("--show-info", action="store_true",
+                        help="Show double-column detection report")
+    p_extract.add_argument("--force-mineru", action="store_true",
+                        help="Force MinerU OCR (requires MINERU_TOKEN for large files)")
+    p_extract.add_argument("--mineru-token",
+                        help="MinerU API token (overrides MINERU_TOKEN env var)")
+    p_extract.add_argument("--save-mineru-token", action="store_true",
+                        help="Save --mineru-token to config.json for future use")
 
     # --- fetch ---
     p_fetch = sub.add_parser("fetch", help="Zotero/Nutstore access")
@@ -173,6 +182,13 @@ def main():
     p_score = sub.add_parser("score", help="Paper quality scoring")
     p_score.add_argument("target", help="Metadata JSON or 'template'")
     p_score.add_argument("--output", "-o", help="Output path")
+
+    # --- rate ---
+    p_rate = sub.add_parser("rate", help="Rate paper by journal/author/citations")
+    p_rate.add_argument("journal_name", help="Journal name")
+    p_rate.add_argument("--author", default="", help="Author name")
+    p_rate.add_argument("--cited", type=int, default=0, help="Citation count")
+    p_rate.add_argument("--has-methodology", action="store_true", help="Has methodology section")
 
     # --- coverage ---
     p_cov = sub.add_parser("coverage", help="Coverage checking")
@@ -208,7 +224,7 @@ def main():
     p_model.add_argument("action", choices=[
         "add", "list", "show", "match", "prune", "snapshot",
         "rollback", "detect-conflict", "report", "export", "import",
-        "self-assess", "evolution-status"
+        "self-assess", "evolution-status", "rebuild"
     ], help="Model action")
     p_model.add_argument("args", nargs=argparse.REMAINDER, help="Action arguments")
 
@@ -231,6 +247,40 @@ def main():
     p_repro_sub.add_parser("list", help="List stored papers")
     p_rs = p_repro_sub.add_parser("search", help="Search papers")
     p_rs.add_argument("keyword")
+
+    # --- scoverage (mechanism C) ---
+    p_scover = sub.add_parser("scoverage", help="Sentence-level coverage report")
+    p_scover.add_argument("--input", "-i", required=True, help="Input text file")
+    p_scover.add_argument("--output", "-o", help="Output report path")
+    p_scover.add_argument("--show-clean-log", action="store_true", help="Show cleaning log")
+
+    # --- progress (mechanism A) ---
+    p_prog = sub.add_parser("progress", help="Progress tracking (mechanism A)")
+    p_prog_sub = p_prog.add_subparsers(dest="progress_command")
+    p_prog_init = p_prog_sub.add_parser("init", help="Initialize progress")
+    p_prog_init.add_argument("--paper", required=True)
+    p_prog_init.add_argument("--key", required=True)
+    p_prog_init.add_argument("--type", required=True)
+    p_prog_init.add_argument("--level", required=True, choices=["精读", "泛读", "浏览"])
+    p_prog_init.add_argument("--mode", default="对话流")
+    p_prog_report = p_prog_sub.add_parser("report", help="Update a step")
+    p_prog_report.add_argument("--step", type=int, required=True)
+    p_prog_report.add_argument("--status", required=True,
+                               choices=["pending", "in_progress", "completed", "skipped", "blocked"])
+    p_prog_report.add_argument("--detail", default="")
+    p_prog_sub.add_parser("show", help="Show full progress")
+
+    # --- decision (mechanism B) ---
+    p_dec = sub.add_parser("decision", help="Decision checkpoint (mechanism B)")
+    p_dec_sub = p_dec.add_subparsers(dest="decision_command")
+    p_dec_check = p_dec_sub.add_parser("check", help="Run checkpoint check")
+    p_dec_check.add_argument("--step", type=int, required=True)
+    p_dec_check.add_argument("--context", default="")
+    p_dec_ask = p_dec_sub.add_parser("ask", help="Ask a decision question")
+    p_dec_ask.add_argument("--question", required=True)
+    p_dec_ask.add_argument("--option-a", required=True)
+    p_dec_ask.add_argument("--option-b", required=True)
+    p_dec_ask.add_argument("--option-c", default="")
 
     # --- welcome ---
     sub.add_parser("welcome", help="Show getting-started guide")
@@ -256,15 +306,36 @@ def main():
             script_args += ["--stdout"]
         if args.engine != "auto":
             script_args += ["--engine", args.engine]
+        if args.show_info:
+            script_args += ["--show-info"]
+        if args.force_mineru:
+            script_args += ["--force-mineru"]
+        if args.mineru_token:
+            script_args += ["--mineru-token", args.mineru_token]
+        if getattr(args, 'save_mineru_token', False):
+            script_args += ["--save-mineru-token"]
         _run("extract_pdf_text.py", script_args)
 
     elif cmd == "fetch":
         _run("fetch_zotero.py", [args.mode] + args.args)
 
     elif cmd == "score":
-        script_args = ["score" if args.target != "template" else "template", args.target]
+        if args.target == "template":
+            script_args = ["template"]
+        else:
+            script_args = ["score", args.target]
         if args.output:
             script_args += ["--output", args.output]
+        _run("analyze_paper.py", script_args)
+
+    elif cmd == "rate":
+        script_args = ["rate", args.journal_name]
+        if args.author:
+            script_args += ["--author", args.author]
+        if args.cited:
+            script_args += ["--cited", str(args.cited)]
+        if args.has_methodology:
+            script_args += ["--has-methodology"]
         _run("analyze_paper.py", script_args)
 
     elif cmd == "coverage":
@@ -310,6 +381,42 @@ def main():
             _run("reproduce_paper.py", ["list"])
         elif args.reproduce_command == "search":
             _run("reproduce_paper.py", ["search", args.keyword])
+
+    elif cmd == "scoverage":
+        s_args = ["--input", args.input]
+        if args.output:
+            s_args += ["--output", args.output]
+        if args.show_clean_log:
+            s_args += ["--show-clean-log"]
+        _run("sentence_coverage.py", s_args)
+
+    elif cmd == "progress":
+        if args.progress_command == "init":
+            _run("progress_reporter.py", ["init",
+                 "--paper", args.paper, "--key", args.key,
+                 "--type", args.type, "--level", args.level,
+                 "--mode", args.mode])
+        elif args.progress_command == "report":
+            _run("progress_reporter.py", ["report",
+                 "--step", str(args.step),
+                 "--status", args.status,
+                 "--detail", args.detail])
+        elif args.progress_command == "show":
+            _run("progress_reporter.py", ["show"])
+
+    elif cmd == "decision":
+        if args.decision_command == "check":
+            d_args = ["check", "--step", str(args.step)]
+            if args.context:
+                d_args += ["--context", args.context]
+            _run("decision_checkpoint.py", d_args)
+        elif args.decision_command == "ask":
+            d_args = ["ask", "--question", args.question,
+                     "--option-a", args.option_a,
+                     "--option-b", args.option_b]
+            if args.option_c:
+                d_args += ["--option-c", args.option_c]
+            _run("decision_checkpoint.py", d_args)
 
     elif cmd == "welcome":
         cmd_welcome()

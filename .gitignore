@@ -1,30 +1,21 @@
 # paper-scholar .gitignore
 
-# User-specific learning data (varies per user)
-.learnings/
+# ============================================================
+#  User data directory — everything under .paper-scholar/
+#  is generated at runtime and varies per user. NEVER commit.
+# ============================================================
+.paper-scholar/
 
-# Model snapshots and archives (can be regenerated)
-models/snapshots/
-models/archive/
+# User-specific skill state (generated at runtime)
+.skill_state.json
 
-# Extracted text files (can be regenerated)
+# Extracted text files (can be regenerated from PDFs)
 *.txt
-
-# Accumulated paper data (may contain copyrighted content)
-# Exclude user-generated analysis data, but track sample/template files
-data/*.json
-!data/samples/
-data/samples/*.json
-!data/README.md
-
-# Prescriptions (can be regenerated from models)
-prescriptions/
 
 # Python cache
 __pycache__/
 *.pyc
-# Auto-generated model index (regenerated on each model update)
-models/index.json
 
-# Skill self-evolution state (user-specific)
-.skill_state.json
+# OS files
+.DS_Store
+Thumbs.db

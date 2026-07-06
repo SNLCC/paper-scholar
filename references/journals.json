@@ -1,0 +1,23 @@
+{
+  "CSSCI核心": {
+    "哲学研究":       {"score": 38, "field": "philosophy"},
+    "道德与文明":     {"score": 36, "field": "ethics"},
+    "哲学动态":       {"score": 34, "field": "philosophy"},
+    "世界哲学":       {"score": 33, "field": "philosophy"},
+    "伦理学研究":     {"score": 37, "field": "ethics"},
+    "中国哲学史":     {"score": 32, "field": "chinese_philosophy"},
+    "哲学评论":       {"score": 35, "field": "philosophy"},
+    "政治学研究":     {"score": 36, "field": "political_science"},
+    "中国社会科学":   {"score": 40, "field": "social_science"},
+    "社会学研究":     {"score": 38, "field": "sociology"},
+    "法学研究":       {"score": 37, "field": "law"}
+  },
+  "CSSCI扩展": {
+    "哲学学报":       {"score": 28, "field": "philosophy"},
+    "伦理学":         {"score": 27, "field": "ethics"}
+  },
+  "北大核心": {
+    "现代哲学":       {"score": 20, "field": "philosophy"},
+    "哲学探索":       {"score": 18, "field": "philosophy"}
+  }
+}

@@ -275,6 +275,131 @@ def upgrade(prescription_id: str, prescription_dir: str | None = None):
     print(f"Prescription not found: {prescription_id}")
 
 
+def extract_from_analysis(analysis_json: str, prescription_dir: str | None = None):
+    """Extract writing guidance elements from a stored analysis JSON.
+
+    Parses the structured analysis to extract:
+    - Introduction function sequences (from sections)
+    - Writing pattern elements (from writing_pattern_model)
+    - Concept usage tips (from concept_usage_model)
+    - Chapter templates (from chapter_templates)
+
+    Updates the corresponding prescription file for the paper type.
+    """
+    from _paths import data_dir as _get_data_dir
+
+    d = _pdir(prescription_dir)
+    analysis = json.loads(Path(analysis_json).read_text(encoding="utf-8"))
+
+    paper_type = analysis.get("paper_type", "") or "综合"
+    paper_id = analysis.get("paper_id", analysis_json)
+    title = analysis.get("title", paper_id)
+
+    # Extract elements from analysis structure
+    elements = {
+        "intro_sequence": [],
+        "body_principles": [],
+        "paragraph_patterns": [],
+        "concept_tips": [],
+        "chapter_templates": [],
+    }
+
+    # 1. Introduction function sequences from sections
+    for sec in analysis.get("sections", []):
+        func = sec.get("rhetorical_function", "").strip()
+        if func:
+            elements["intro_sequence"].append(func)
+
+    # 2. Writing pattern model elements
+    wpm = analysis.get("writing_pattern_model", {})
+    if wpm:
+        for seq in wpm.get("introduction_function_sequences", []):
+            if seq not in elements["intro_sequence"]:
+                elements["intro_sequence"].append(seq)
+        for p in wpm.get("body_organization_principles", []):
+            elements["body_principles"].append(p)
+        for p in wpm.get("paragraph_cohesion_patterns", []):
+            elements["paragraph_patterns"].append(p)
+
+    # 3. Concept usage tips
+    cum = analysis.get("concept_usage_model", {})
+    if cum:
+        for c in cum.get("topic_selection_criteria", []):
+            elements["concept_tips"].append(c)
+        for t in cum.get("title_expression_patterns", []):
+            elements["concept_tips"].append(t)
+
+    # 4. Chapter templates
+    for ct_key, ct_val in analysis.get("chapter_templates", {}).items():
+        if isinstance(ct_val, dict):
+            elements["chapter_templates"].append(ct_val)
+
+    # Build prescription entry
+    pid = f"prescription_{paper_type}_{datetime.now().strftime('%Y%m%d')}"
+    prescription = {
+        "prescription_id": pid,
+        "paper_type": paper_type,
+        "source_title": title,
+        "source_paper_id": paper_id,
+        "sample_count": 1,
+        "confidence": 0.3,
+        "intro_function_sequences": elements["intro_sequence"][:10],
+        "body_organization_principles": elements["body_principles"][:5],
+        "paragraph_cohesion_patterns": elements["paragraph_patterns"][:5],
+        "concept_usage_tips": elements["concept_tips"][:5],
+        "chapter_templates": elements["chapter_templates"][:3],
+        "created": datetime.now().isoformat(),
+        "updated": datetime.now().isoformat(),
+    }
+
+    # Dedup: merge with existing prescription for same paper_type
+    for f in d.glob(f"*{paper_type}*.json"):
+        try:
+            existing = json.loads(f.read_text(encoding="utf-8"))
+            existing["sample_count"] = existing.get("sample_count", 1) + 1
+            existing["confidence"] = min(1.0, existing.get("confidence", 0.3) + 0.05)
+            # Merge new items
+            for key in ["intro_function_sequences", "body_organization_principles",
+                         "paragraph_cohesion_patterns", "concept_usage_tips"]:
+                existing_items = existing.get(key, [])
+                new_items = prescription.get(key, [])
+                for item in new_items:
+                    if item not in existing_items:
+                        existing_items.append(item)
+                existing[key] = existing_items[:10]
+            existing["updated"] = datetime.now().isoformat()
+            f.write_text(json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8")
+            print(f"Updated prescription: {f.stem} (samples={existing['sample_count']}, conf={existing['confidence']:.2f})")
+            return
+        except Exception:
+            continue
+
+    # New prescription
+    dest = d / f"{pid}.json"
+    dest.write_text(json.dumps(prescription, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"New prescription → {dest}")
+
+    # Trigger model rebuild
+    _trigger_model_rebuild(paper_type)
+
+
+def _trigger_model_rebuild(paper_type: str):
+    """Call model rebuild after prescription extraction."""
+    import subprocess, sys
+    script = Path(__file__).resolve().parent / "update_model.py"
+    try:
+        r = subprocess.run(
+            [sys.executable, str(script), "rebuild",
+             "--model-type", "writing_pattern",
+             "--type", paper_type],
+            capture_output=True, text=True, timeout=30
+        )
+        if r.stdout.strip():
+            print(f"[model rebuild] {r.stdout.strip()}")
+    except Exception as e:
+        print(f"[model rebuild warn] {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Writing guidance management")
     parser.add_argument("--prescription-dir", help=f"Prescription directory (default: {DEFAULT_PRESCRIPTION_DIR})")
@@ -288,6 +413,8 @@ def main():
     p_rec.add_argument("chapter_type", help="e.g. introduction, methodology, conclusion")
     p_upg = sub.add_parser("upgrade")
     p_upg.add_argument("prescription_id")
+    p_extract = sub.add_parser("extract", help="Extract guidance from analysis JSON")
+    p_extract.add_argument("analysis_json", help="Path to stored analysis JSON")
 
     args = parser.parse_args()
 
@@ -299,6 +426,8 @@ def main():
         recommend(args.chapter_type, args.model_dir)
     elif args.command == "upgrade":
         upgrade(args.prescription_id, args.prescription_dir)
+    elif args.command == "extract":
+        extract_from_analysis(args.analysis_json, args.prescription_dir)
     else:
         parser.print_help()
 

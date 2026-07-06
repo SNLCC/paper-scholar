@@ -115,15 +115,37 @@ python run.py model list     # 查看模型库
 | 脚本 | 功能 |
 |------|------|
 | `run.py` | 统一命令行入口 |
-| `extract_pdf_text.py` | PDF 文本提取（pdfplumber + 零依赖降级） |
+| `extract_pdf_text.py` | PDF 文本提取（MinerU 在线首选 → PyMuPDF/pdfplumber 本地 fallback） |
 | `fetch_zotero.py` | Zotero 三种接入模式（local/web/webdav） |
 | `analyze_paper.py` | 期刊评分与选题分析 |
 | `accumulate_data.py` | 论文数据写入 data/ |
 | `check_coverage.py` | 覆盖率检查 |
+| `sentence_coverage.py` | 逐句覆盖率闸门（机制 C） |
+| `progress_reporter.py` | 进度追踪（机制 A） |
+| `decision_checkpoint.py` | 决策点检查（机制 B） |
 | `compare_annotations.py` | 分析结果 vs 用户批注对比 |
 | `record_learnings.py` | 学习记录聚合 |
 | `update_model.py` | 模型更新、置信度、冲突检测、修剪快照 |
 | `update_prescription.py` | 写作指导积累与置信度升级 |
+
+### MinerU 在线解析（首选引擎）
+
+PDF 文本提取默认使用 **MinerU 在线 API**，对扫描版、双栏、表格、公式的解析精度最高。
+
+```bash
+# 免 Token 轻量 API（≤10MB，≤20页，IP 限频）
+python run.py extract paper.pdf --engine mineru
+
+# 精准 API（需设置 Token，≤200MB/≤200页）
+export MINERU_TOKEN=your_token_here
+python run.py extract paper.pdf --force-mineru
+
+# 本地引擎（离线场景，按需安装）
+python run.py extract paper.pdf --engine local           # 强制本地引擎
+python run.py extract paper.pdf --engine pymupdf-v62 --show-info  # 双栏自检
+```
+
+> 本地引擎（PyMuPDF / pdfplumber）按需安装 —— 首次使用时脚本会提示并引导安装，或在 MinerU 不可用时自动提示。
 
 ---
 
@@ -135,5 +157,7 @@ MIT License — 详见 [LICENSE](LICENSE)。
 
 | 库 | 版本 | 许可证 | 说明 |
 |----|------|--------|------|
-| [pdfplumber](https://github.com/jsvine/pdfplumber) | `==0.11.10` | MIT | PDF 文本提取，已在此版本上验证 |
+| [requests](https://github.com/psf/requests) | `>=2.28.0` | Apache 2.0 | MinerU API 调用（唯一硬依赖） |
+| [PyMuPDF](https://github.com/pymupdf/PyMuPDF) | 按需安装 | AGPL | 本地离线引擎，首次使用时提示安装 |
+| [pdfplumber](https://github.com/jsvine/pdfplumber) | 按需安装 | MIT | 本地离线引擎备选，按需安装 |
 

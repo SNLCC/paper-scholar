@@ -666,6 +666,139 @@ def import_model(input_path, model_dir=None):
     print(f"Imported as '{mid}' → {dst}")
 
 
+# ===================================================================
+#  rebuild — scan data/ and regenerate model files
+# ===================================================================
+
+def rebuild_models(model_type: str, paper_type_filter: str = "", data_dir: str | None = None):
+    """Scan stored analysis JSONs and rebuild model files.
+
+    Args:
+        model_type: 'all', 'argumentation', 'writing_pattern', 'concept'
+        paper_type_filter: optional filter by paper type substring
+        data_dir: custom data directory
+    """
+    from _paths import data_dir as _get_data_dir, models_dir as _get_models_dir
+
+    ddir = Path(data_dir) if data_dir else _get_data_dir()
+    mdir = _get_models_dir()
+
+    if not ddir.exists():
+        print("No data directory found. Run 'data store' first.")
+        return
+
+    # Scan all stored analyses
+    entries = []
+    for f in sorted(ddir.glob("*.json")):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+
+        paper_type = data.get("paper_type", "") or data.get("type", "") or "未知"
+        title = data.get("title", "") or data.get("paper_id", f.stem)
+        paper_id = data.get("paper_id", f.stem)
+        abstract = data.get("abstract", "") or data.get("core_argument", "") or ""
+
+        if paper_type_filter and paper_type_filter not in paper_type:
+            continue
+
+        entries.append({
+            "paper_id": paper_id,
+            "title": title,
+            "paper_type": paper_type,
+            "abstract": abstract[:200] if abstract else "",
+            "stored_at": data.get("_stored_at", ""),
+            "confidence": data.get("confidence", ""),
+            "argumentation": data.get("argumentation_model", {}),
+            "writing_pattern": data.get("writing_pattern_model", {}),
+            "concept_usage": data.get("concept_usage_model", {}),
+        })
+
+    if not entries:
+        print("No matching papers found in data/.")
+        return
+
+    # Group by paper_type
+    from collections import defaultdict
+    by_type: dict[str, list] = defaultdict(list)
+    for e in entries:
+        by_type[e["paper_type"]].append(e)
+
+    model_types = {
+        "all": ["argumentation", "writing_pattern", "concept"],
+        "argumentation": ["argumentation"],
+        "writing_pattern": ["writing_pattern"],
+        "concept": ["concept"],
+    }
+    mt_keys = model_types.get(model_type, model_types["all"])
+
+    model_labels = {
+        "argumentation": "论证模型",
+        "writing_pattern": "写作模式模型",
+        "concept": "概念/选题模型",
+    }
+
+    from datetime import datetime as dt
+
+    for pt, papers in sorted(by_type.items()):
+        count = len(papers)
+        confidence = "高" if count >= 5 else "中" if count >= 2 else "低"
+
+        for mk in mt_keys:
+            label = model_labels.get(mk, mk)
+            type_dir = mdir / label
+            type_dir.mkdir(parents=True, exist_ok=True)
+            model_file = type_dir / f"{pt}.json"
+
+            # Build model entry
+            sources = [p["title"] for p in papers]
+            model_data = {
+                "model_id": f"{label}/{pt}",
+                "label": f"{pt} {label}",
+                "type_family": pt,
+                "papers_count": count,
+                "confidence": confidence,
+                "sources": sources,
+                "papers_analyzed": [p["paper_id"] for p in papers],
+                "updated": dt.now().isoformat(),
+                "verification_required": count < 2,
+            }
+
+            # Aggregate sub-model data if available
+            if mk == "argumentation":
+                model_data["argumentation_model"] = _merge_sub_models(
+                    [p.get("argumentation", {}) for p in papers if p.get("argumentation")])
+            elif mk == "writing_pattern":
+                model_data["writing_pattern_model"] = _merge_sub_models(
+                    [p.get("writing_pattern", {}) for p in papers if p.get("writing_pattern")])
+            elif mk == "concept":
+                model_data["concept_usage_model"] = _merge_sub_models(
+                    [p.get("concept_usage", {}) for p in papers if p.get("concept_usage")])
+
+            model_file.write_text(json.dumps(model_data, indent=2, ensure_ascii=False), encoding="utf-8")
+            print(f"[{'%d' % count:>2}篇 | {confidence}] {model_file.name}")
+
+    total = len(entries)
+    print(f"\nRebuild complete: {total} papers, {len(by_type)} types, {len(mt_keys)} model(s).")
+
+
+def _merge_sub_models(sub_models: list[dict]) -> dict:
+    """Merge multiple sub-model dicts into one summary."""
+    if not sub_models:
+        return {}
+    merged = {}
+    for key in sub_models[0]:
+        values = []
+        for sm in sub_models:
+            v = sm.get(key)
+            if v and isinstance(v, str) and v not in values:
+                values.append(v)
+        if values:
+            merged[key] = " | ".join(values[:5])
+    return merged
+
+
 def main():
     parser = argparse.ArgumentParser(description="Model update and management")
     parser.add_argument("--model-dir", help="Custom model directory")
@@ -699,6 +832,12 @@ def main():
     p_report.add_argument("--output", "-o", help="Output markdown file")
     sub.add_parser("self-assess", help="Run self-assessment of model system")
     sub.add_parser("evolution-status", help="Show skill evolution state")
+    p_rebuild = sub.add_parser("rebuild", help="Rebuild models from stored analysis data")
+    p_rebuild.add_argument("--model-type", choices=["all", "argumentation", "writing_pattern", "concept"],
+                           default="all", help="Model type to rebuild (default: all)")
+    p_rebuild.add_argument("--type", dest="paper_type", default="",
+                           help="Filter by paper type (substring match)")
+    p_rebuild.add_argument("--data-dir", help="Custom data directory")
 
     args = parser.parse_args()
 
@@ -716,6 +855,7 @@ def main():
         "report": lambda: report_model(args.model_id, args.output, args.model_dir),
         "self-assess": lambda: self_assess(args.model_dir),
         "evolution-status": lambda: evolution_status(args.model_dir),
+        "rebuild": lambda: rebuild_models(args.model_type, args.paper_type, args.data_dir),
     }
     fn = cmds.get(args.command)
     if fn:
