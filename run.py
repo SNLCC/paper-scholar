@@ -42,6 +42,10 @@ Usage:
     python run.py prescribe add <prescription.json>        # Add prescription
     python run.py prescribe recommend <chapter_type>       # Get recommendations
     python run.py prescribe upgrade <prescription_id>      # Upgrade confidence
+    python run.py configure                                 # Interactive configuration wizard
+    python run.py configure --show                           # Show configuration status
+    python run.py configure --mineru-token <token>           # Set specific config value
+    python run.py status                                     # Alias for 'configure --show'
     python run.py welcome                                    # Show getting-started guide
     python run.py reproduce recall <paper_id>               # Recall paper skeleton
     python run.py reproduce list                            # List stored papers
@@ -98,6 +102,10 @@ paper-scholar 是一个学术论文精读与写作辅助工具。它可以：
 --- 数据目录 ---
 积累数据存储在项目目录的 .paper-scholar/ 下
   自定义：export PAPER_SCHOLAR_DATA_DIR=/path/to/data
+
+--- 配置 ---
+  python run.py configure              # 交互式配置向导
+  python run.py status                 # 查看配置状态
 
 --- 更新 ---
   python install.py   # 自动检测新版本，保留用户数据
@@ -282,6 +290,26 @@ def main():
     p_dec_ask.add_argument("--option-b", required=True)
     p_dec_ask.add_argument("--option-c", default="")
 
+    # --- configure ---
+    p_conf = sub.add_parser("configure", help="Configuration wizard & status")
+    p_conf.add_argument("--show", action="store_true",
+                        help="Show current configuration status")
+    p_conf.add_argument("--mineru-token", nargs="?", const="", default=None,
+                        help="Set MinerU API token")
+    p_conf.add_argument("--zotero-api-key", nargs="?", const="", default=None,
+                        help="Set Zotero Web API key")
+    p_conf.add_argument("--zotero-user-id", nargs="?", const="", default=None,
+                        help="Set Zotero user ID")
+    p_conf.add_argument("--webdav-user", nargs="?", const="", default=None,
+                        help="Set WebDAV username")
+    p_conf.add_argument("--webdav-password", nargs="?", const="", default=None,
+                        help="Set WebDAV password")
+    p_conf.add_argument("--zotero-data-dir", nargs="?", const="", default=None,
+                        help="Set Zotero data directory path")
+
+    # --- status ---
+    p_status = sub.add_parser("status", help="Show configuration status")
+
     # --- welcome ---
     sub.add_parser("welcome", help="Show getting-started guide")
 
@@ -417,6 +445,23 @@ def main():
             if args.option_c:
                 d_args += ["--option-c", args.option_c]
             _run("decision_checkpoint.py", d_args)
+
+    elif cmd == "configure":
+        conf_args = []
+        if args.show:
+            conf_args.append("--show")
+        else:
+            for flag in ["--mineru-token", "--zotero-api-key", "--zotero-user-id",
+                          "--webdav-user", "--webdav-password", "--zotero-data-dir"]:
+                val = getattr(args, flag.lstrip("--").replace("-", "_"), None)
+                if val is not None:
+                    conf_args.append(flag)
+                    if val:
+                        conf_args.append(val)
+        _run("configure.py", conf_args)
+
+    elif cmd == "status":
+        _run("configure.py", ["--show"])
 
     elif cmd == "welcome":
         cmd_welcome()

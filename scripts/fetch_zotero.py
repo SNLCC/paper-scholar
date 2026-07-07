@@ -54,6 +54,25 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 # ---------------------------------------------------------------------------
+# Config helpers (shared with configure.py)
+# ---------------------------------------------------------------------------
+
+def _config_path() -> Path:
+    from _paths import data_root
+    return data_root() / "config.json"
+
+
+def _load_config() -> dict:
+    p = _config_path()
+    if p.exists():
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+# ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
@@ -71,15 +90,27 @@ def _find_zotero_data_dir() -> Path | None:
     
     Order of precedence:
       1. ZOTERO_DATA_DIR environment variable
-      2. Windows: %APPDATA%\\Zotero\\Zotero\\Profiles\\*.default\\zotero\\
-      3. macOS: ~/Zotero/
-      4. Linux: ~/.zotero/zotero/*.default/zotero/
+      2. config.json (set via: python run.py configure --zotero-data-dir <path>)
+      3. Windows: %APPDATA%\\Zotero\\Zotero\\Profiles\\*.default\\zotero\\
+      4. macOS: ~/Zotero/
+      5. Linux: ~/.zotero/zotero/*.default/zotero/
     """
     env_dir = os.environ.get("ZOTERO_DATA_DIR")
     if env_dir:
         p = Path(env_dir)
         if p.is_dir():
             return p.resolve()
+
+    # Check config.json (set via 'python run.py configure')
+    try:
+        cfg = _load_config()
+        cfg_dir = cfg.get("zotero_data_dir")
+        if cfg_dir:
+            p = Path(cfg_dir)
+            if p.is_dir():
+                return p.resolve()
+    except Exception:
+        pass
 
     home = Path.home()
 
@@ -602,8 +633,8 @@ def main():
     p_item.add_argument("--pdf-path", "-p", action="store_true", help="Show PDF attachment path")
 
     # --- web ---
-    p_web = sub.add_parser("web", help="Zotero Web API (requires API key)")
-    p_web.add_argument("--api-key", required=True, help="Zotero API key")
+    p_web = sub.add_parser("web", help="Zotero Web API")
+    p_web.add_argument("--api-key", help="Zotero API key (falls back to config.json)")
     p_web.add_argument("--user-id", help="Zotero user ID (auto-detected if omitted)")
     p_web_sub = p_web.add_subparsers(dest="command2")
     p_web_sub.add_parser("collections", help="List collections")
@@ -615,8 +646,8 @@ def main():
 
     # --- webdav ---
     p_wd = sub.add_parser("webdav", help="WebDAV (Nutstone 坚果云)")
-    p_wd.add_argument("--user", required=True, help="WebDAV username (email)")
-    p_wd.add_argument("--password", required=True, help="WebDAV password (app password)")
+    p_wd.add_argument("--user", help="WebDAV username/email (falls back to config.json)")
+    p_wd.add_argument("--password", help="WebDAV password/app-password (falls back to config.json)")
     p_wd_sub = p_wd.add_subparsers(dest="command2")
     p_ls = p_wd_sub.add_parser("ls", help="List remote directory")
     p_ls.add_argument("remote_path", nargs="?", default="", help="Remote path")
@@ -626,11 +657,30 @@ def main():
 
     args = parser.parse_args()
 
+    # Fall back to config.json for credentials not provided via CLI
+    config = _load_config()
+
     if args.mode == "local":
         cmd_local(args)
     elif args.mode == "web":
+        api_key = args.api_key or config.get("zotero_api_key")
+        user_id = args.user_id or config.get("zotero_user_id")
+        if not api_key:
+            print("Error: Zotero Web API requires an API key.", file=sys.stderr)
+            print("  Provide via --api-key or configure: python run.py configure", file=sys.stderr)
+            sys.exit(1)
+        args.api_key = api_key
+        args.user_id = user_id
         cmd_web(args)
     elif args.mode == "webdav":
+        user = args.user or config.get("webdav_user")
+        password = args.password or config.get("webdav_password")
+        if not user or not password:
+            print("Error: WebDAV requires username and password.", file=sys.stderr)
+            print("  Provide via --user/--password or configure: python run.py configure", file=sys.stderr)
+            sys.exit(1)
+        args.user = user
+        args.password = password
         cmd_webdav(args)
     else:
         parser.print_help()
