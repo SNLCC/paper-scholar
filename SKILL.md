@@ -65,8 +65,8 @@ description: >
   npx skills add SNLCC/paper-scholar
 
   # 2. 安装 Python 依赖
-  pip install -r .agents/skills/paper-scholar/requirements.txt
-  或: python .agents/skills/paper-scholar/run.py postinstall
+  python .agents/skills/paper-scholar/run.py postinstall
+  # 或手动装: pip install -r .agents/skills/paper-scholar/requirements.txt
 
   # 3. 运行配置向导（设置 MinerU Token、Zotero API Key 等）
   python .agents/skills/paper-scholar/run.py configure
@@ -407,7 +407,7 @@ alias ps='python .agents/skills/paper-scholar/run.py'
 
 ```bash
 # 指定数据目录（默认 .paper-scholar/）
-python .agents/skills/paper-scholar/run.py --data-dir /path/to/data <command>
+python run.py --data-dir /path/to/data <command>
 
 # 获取论文（MinerU 在线解析 → 提示安装本地引擎）
 python run.py extract paper.pdf --output paper.txt

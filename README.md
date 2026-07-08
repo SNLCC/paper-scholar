@@ -23,13 +23,13 @@
 ```bash
 # 方式一（推荐）：安装到当前项目
 npx skills add SNLCC/paper-scholar
-pip install -r .agents/skills/paper-scholar/requirements.txt
+python .agents/skills/paper-scholar/run.py postinstall
 python .agents/skills/paper-scholar/run.py configure
 
 # 方式二：独立克隆使用（不依赖 Codex）
 git clone https://github.com/SNLCC/paper-scholar.git
 cd paper-scholar
-pip install -r requirements.txt
+python run.py postinstall
 python run.py configure
 ```
 

@@ -245,45 +245,10 @@ def cmd_doctor():
     print()
 
 
-def cmd_quick() -> bool:
-    """Quick first-run gate — return True if setup is complete."""
-    # Check marker
-    if (data_root() / ".setup_done").exists():
-        return True
-
-    # No marker — guide user
-    print()
-    print("=" * 60)
-    print("  ⚠ paper-scholar 首次使用检测")
-    print("=" * 60)
-    print()
-    print("  检测到首次使用，需要完成以下步骤：")
-    print()
-    print("  1️⃣  安装 Python 依赖")
-    print("     python run.py postinstall")
-    print()
-    print("  2️⃣  配置服务凭证（API Token 等）")
-    print("     python run.py configure")
-    print()
-    print("  3️⃣  查看全部状态")
-    print("     python run.py doctor")
-    print()
-    print("=" * 60)
-    print()
-    return False
-
-
 def main():
     parser = argparse.ArgumentParser(description="paper-scholar health check")
-    parser.add_argument("--quick", action="store_true",
-                        help="Quick check (exit code: 0=ready, 1=needs setup)")
     args = parser.parse_args()
-
-    if args.quick:
-        ok = cmd_quick()
-        sys.exit(0 if ok else 1)
-    else:
-        cmd_doctor()
+    cmd_doctor()
 
 
 if __name__ == "__main__":

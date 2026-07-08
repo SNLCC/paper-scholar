@@ -18,6 +18,7 @@ if hasattr(sys.stdout, 'reconfigure'):
         pass
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -76,5 +77,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import os
     main()
