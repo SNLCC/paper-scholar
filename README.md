@@ -18,31 +18,39 @@
 
 ## 快速开始
 
-### 一键安装
+### 安装
 
 ```bash
-python -c "$(curl -fsSL https://raw.githubusercontent.com/SNLCC/paper-scholar/main/install.py)"
+# 方式一（推荐）：安装到当前项目
+npx skills add SNLCC/paper-scholar
+pip install -r .agents/skills/paper-scholar/requirements.txt
+python .agents/skills/paper-scholar/run.py configure
+
+# 方式二：独立克隆使用（不依赖 Codex）
+git clone https://github.com/SNLCC/paper-scholar.git
+cd paper-scholar
+pip install -r requirements.txt
+python run.py configure
 ```
 
-### 或者手动安装
+> **提示**：建议设置别名简化命令：`alias ps='python .agents/skills/paper-scholar/run.py'`
+
+### 快速上手
 
 ```bash
-# 1. 安装依赖
-pip install -r requirements.txt
-
-# 2. 安装到 Codex（将 skill 复制到 ~/.codex/skills/）
-python run.py install
-
-# 3. 精读一篇论文
-python run.py extract paper.pdf --output paper.txt
+# 1. 精读一篇论文
+ps extract paper.pdf --output paper.txt
 # 将 paper.txt 交给支持 Codex 的 AI 助手，它会按 8 条规范逐层分析
 
-# 4. 存储分析结果
-python run.py data store analysis.json
-python run.py model add analysis.json
+# 2. 存储分析结果
+ps data store analysis.json
+ps model add analysis.json
 
-# 5. 查看所有命令
-python run.py --help
+# 3. 需要写作指导时
+ps prescribe recommend introduction
+
+# 4. 更新 skill
+npx skills update
 ```
 
 ### 数据目录
@@ -52,8 +60,8 @@ python run.py --help
 ```bash
 # 自定义数据目录
 export PAPER_SCHOLAR_DATA_DIR=/path/to/your/data
-python run.py data list      # 查看论文存档
-python run.py model list     # 查看模型库
+ps data list      # 查看论文存档
+ps model list     # 查看模型库
 ```
 
 > **注意**：这些数据现在位于项目目录而非 skill 安装目录，因此 skill 更新时不会影响你的积累。如果你之前有旧版本的数据（在 `~/.codex/skills/paper-scholar/data/` 等位置），请手动迁移到新位置。
@@ -115,6 +123,8 @@ python run.py model list     # 查看模型库
 | 脚本 | 功能 |
 |------|------|
 | `run.py` | 统一命令行入口 |
+| `postinstall.py` | pip 依赖安装 |
+| `configure.py` | 配置向导（MinerU Token、Zotero API Key 等） |
 | `extract_pdf_text.py` | PDF 文本提取（MinerU 在线首选 → PyMuPDF/pdfplumber 本地 fallback） |
 | `fetch_zotero.py` | Zotero 三种接入模式（local/web/webdav） |
 | `analyze_paper.py` | 期刊评分与选题分析 |

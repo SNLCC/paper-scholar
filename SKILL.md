@@ -61,11 +61,23 @@ description: >
   -> 从坚果云下载论文
 
 开始前：
-  python install.py   # 装依赖 + 注册到 Codex，已装则自动检查更新
+  # 1. 安装本 skill（装到当前项目的 .agents/skills/ 下）
+  npx skills add SNLCC/paper-scholar
+
+  # 2. 安装 Python 依赖
+  pip install -r .agents/skills/paper-scholar/requirements.txt
+  或: python .agents/skills/paper-scholar/run.py postinstall
+
+  # 3. 运行配置向导（设置 MinerU Token、Zotero API Key 等）
+  python .agents/skills/paper-scholar/run.py configure
+
+  # 4. 验证安装状态
+  python .agents/skills/paper-scholar/run.py doctor
 
 数据目录说明：
-  精读成果、模型库、学习记录等积累数据存储在项目目录的 .paper-scholar/ 下。
-  如需自定义，设置环境变量：export PAPER_SCHOLAR_DATA_DIR=/path/to/data
+  精读成果、模型库、学习记录等积累数据存储在项目根目录的 .paper-scholar/ 下。
+  skill 文件在 .agents/skills/paper-scholar/ 下——两者分离，更新 skill 不影响积累。
+  如需自定义数据目录：export PAPER_SCHOLAR_DATA_DIR=/path/to/data
 
 MinerU 在线解析（首选引擎）：
   PDF 提取默认使用 MinerU 在线 API（精度最高，支持扫描件/双栏/表格/公式）。
@@ -383,11 +395,19 @@ python scripts/update_model.py rollback <model_id> <snapshot_id>
 
 ## 快速命令参考
 
-所有操作通过统一入口 `run.py` 调用：
+所有命令假设在项目根目录执行（skill 安装在 `.agents/skills/paper-scholar/`）。
+建议用户设置别名：
+
+```bash
+# 可选：为长路径设置别名
+alias ps='python .agents/skills/paper-scholar/run.py'
+```
+
+以下命令中的 `python run.py` 均指 `python .agents/skills/paper-scholar/run.py`：
 
 ```bash
 # 指定数据目录（默认 .paper-scholar/）
-python run.py --data-dir /path/to/data <command>
+python .agents/skills/paper-scholar/run.py --data-dir /path/to/data <command>
 
 # 获取论文（MinerU 在线解析 → 提示安装本地引擎）
 python run.py extract paper.pdf --output paper.txt

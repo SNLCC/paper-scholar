@@ -46,7 +46,9 @@ Usage:
     python run.py configure --show                           # Show configuration status
     python run.py configure --mineru-token <token>           # Set specific config value
     python run.py status                                     # Alias for 'configure --show'
+    python run.py doctor                                     # Full health check
     python run.py welcome                                    # Show getting-started guide
+    python run.py postinstall                                # Install Python dependencies
     python run.py reproduce recall <paper_id>               # Recall paper skeleton
     python run.py reproduce list                            # List stored papers
     python run.py reproduce search <keyword>                # Search papers
@@ -86,7 +88,9 @@ paper-scholar 是一个学术论文精读与写作辅助工具。它可以：
 ------ 快速上手 ------
 
 第一步：安装
-  python install.py   # 自动下载 + 装依赖 + 注册到 Codex
+  npx skills add SNLCC/paper-scholar    # 安装本 skill 到 .agents/skills/
+  python run.py postinstall              # 安装 Python 依赖
+  python run.py configure                # 配置 API Token 等
 
 第二步：精读一篇论文
   python run.py extract paper.pdf --output paper.txt
@@ -108,7 +112,7 @@ paper-scholar 是一个学术论文精读与写作辅助工具。它可以：
   python run.py status                 # 查看配置状态
 
 --- 更新 ---
-  python install.py   # 自动检测新版本，保留用户数据
+  npx skills update                    # 更新已安装的 skill
 
 查看所有命令：
   python run.py --help
@@ -144,17 +148,6 @@ def _run(script: str, args: list[str]):
     if _GLOBAL_DATA_DIR:
         env["PAPER_SCHOLAR_DATA_DIR"] = _GLOBAL_DATA_DIR
     result = subprocess.run(cmd, env=env)
-    sys.exit(result.returncode)
-
-
-def cmd_install():
-    """Install to Codex skills directory (auto-detects install vs update)."""
-    import subprocess
-    install_script = Path(__file__).resolve().parent / "install.py"
-    env = os.environ.copy()
-    if _GLOBAL_DATA_DIR:
-        env["PAPER_SCHOLAR_DATA_DIR"] = _GLOBAL_DATA_DIR
-    result = subprocess.run([sys.executable, str(install_script)], env=env)
     sys.exit(result.returncode)
 
 
@@ -310,21 +303,44 @@ def main():
     # --- status ---
     p_status = sub.add_parser("status", help="Show configuration status")
 
+    # --- doctor ---
+    p_doctor = sub.add_parser("doctor", help="Health check for setup, deps, and credentials")
+
     # --- welcome ---
     sub.add_parser("welcome", help="Show getting-started guide")
 
-    # --- install ---
-    sub.add_parser("install", help="Install skill to Codex skills directory")
-
-    # --- update ---
-    p_update = sub.add_parser("update", help="Update skill (preserves user data)")
-    p_update.add_argument("--force", action="store_true", help="Force update even if same version")
+    # --- postinstall ---
+    sub.add_parser("postinstall", help="Install Python dependencies (pip install -r requirements.txt)")
 
     args = parser.parse_args()
     global _GLOBAL_DATA_DIR
     _GLOBAL_DATA_DIR = args.data_dir
 
     cmd = args.command
+
+    # ── First-run gate ──────────────────────────────────────────────
+    # Show setup reminder on first use (skip for setup/helper commands)
+    _SETUP_SKIP_COMMANDS = {"configure", "status", "doctor", "welcome", "postinstall", None}
+    if cmd not in _SETUP_SKIP_COMMANDS and not os.environ.get("SKIP_FIRST_RUN_CHECK"):
+        if not (data_root() / ".setup_done").exists():
+            print("=" * 60, file=sys.stderr)
+            print("  ⚠ paper-scholar 首次使用检测", file=sys.stderr)
+            print("=" * 60, file=sys.stderr)
+            print(file=sys.stderr)
+            print("  检测到首次使用，建议先完成以下步骤：", file=sys.stderr)
+            print(file=sys.stderr)
+            print("  1️⃣  安装 Python 依赖", file=sys.stderr)
+            print("     python run.py postinstall", file=sys.stderr)
+            print(file=sys.stderr)
+            print("  2️⃣  配置服务凭证（API Token 等）", file=sys.stderr)
+            print("     python run.py configure", file=sys.stderr)
+            print(file=sys.stderr)
+            print("  3️⃣  查看完整健康状态", file=sys.stderr)
+            print("     python run.py doctor", file=sys.stderr)
+            print(file=sys.stderr)
+            print("  (设置 SKIP_FIRST_RUN_CHECK=1 可跳过此检测)", file=sys.stderr)
+            print("=" * 60, file=sys.stderr)
+            print(file=sys.stderr)
 
     if cmd == "extract":
         script_args = [args.pdf]
@@ -466,18 +482,17 @@ def main():
     elif cmd == "welcome":
         cmd_welcome()
 
-    elif cmd == "install":
-        cmd_install()
-
-    elif cmd == "update":
+    elif cmd == "postinstall":
         import subprocess
-        install_script = Path(__file__).resolve().parent / "install.py"
-        extra = ["--force"] if getattr(args, 'force', False) else []
+        postinstall_script = Path(__file__).resolve().parent / "postinstall.py"
         env = os.environ.copy()
         if _GLOBAL_DATA_DIR:
             env["PAPER_SCHOLAR_DATA_DIR"] = _GLOBAL_DATA_DIR
-        result = subprocess.run([sys.executable, str(install_script)] + extra, env=env)
+        result = subprocess.run([sys.executable, str(postinstall_script)], env=env)
         sys.exit(result.returncode)
+
+    elif cmd == "doctor":
+        _run("doctor.py", [])
 
     else:
         parser.print_help()
