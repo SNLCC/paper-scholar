@@ -33,21 +33,19 @@ python run.py postinstall
 python run.py configure
 ```
 
-> **提示**：建议设置别名简化命令：`alias ps='python .agents/skills/paper-scholar/run.py'`
-
 ### 快速上手
 
 ```bash
 # 1. 精读一篇论文
-ps extract paper.pdf --output paper.txt
+python run.py extract paper.pdf --output paper.txt
 # 将 paper.txt 交给支持 Codex 的 AI 助手，它会按 8 条规范逐层分析
 
 # 2. 存储分析结果
-ps data store analysis.json
-ps model add analysis.json
+python run.py data store analysis.json
+python run.py model add analysis.json
 
 # 3. 需要写作指导时
-ps prescribe recommend introduction
+python run.py prescribe recommend introduction
 
 # 4. 更新 skill
 npx skills update
@@ -60,8 +58,8 @@ npx skills update
 ```bash
 # 自定义数据目录
 export PAPER_SCHOLAR_DATA_DIR=/path/to/your/data
-ps data list      # 查看论文存档
-ps model list     # 查看模型库
+python run.py data list      # 查看论文存档
+python run.py model list     # 查看模型库
 ```
 
 > **注意**：这些数据现在位于项目目录而非 skill 安装目录，因此 skill 更新时不会影响你的积累。如果你之前有旧版本的数据（在 `~/.codex/skills/paper-scholar/data/` 等位置），请手动迁移到新位置。
