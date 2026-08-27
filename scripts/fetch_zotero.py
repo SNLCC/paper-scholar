@@ -81,6 +81,14 @@ ZOTERO_WEB_API = "https://api.zotero.org/"
 NUTSTORE_WEBDAV = "https://dav.jianguoyun.com/dav/"
 
 
+def _parse_base_url(base_url: str):
+    """Parse a WebDAV base URL, falling back to the Nutstore default."""
+    from urllib.parse import urlparse
+    if not base_url:
+        base_url = NUTSTORE_WEBDAV
+    return urlparse(base_url)
+
+
 # ===================================================================
 #  Zotero path resolution helpers
 # ===================================================================
@@ -432,6 +440,16 @@ class NutstoreWebDAV:
     """
 
     def __init__(self, user: str, password: str, base_url: str = NUTSTORE_WEBDAV):
+        # Guard against credentials being sent to a non-Nutstore host. A caller
+        # could otherwise pass an arbitrary base_url and silently leak the
+        # email + app-password to a third-party site.
+        parsed = _parse_base_url(base_url)
+        host = (parsed.hostname or "").lower()
+        if parsed.scheme != "https" or not (host == "jianguoyun.com" or host.endswith(".jianguoyun.com")):
+            raise ValueError(
+                f"拒绝访问不安全/非坚果云的 WebDAV 地址: {base_url}"
+                "（仅允许 https 协议且 host 属于 jianguoyun.com）"
+            )
         self.base = base_url.rstrip("/") + "/"
         auth_bytes = f"{user}:{password}".encode("utf-8")
         self.auth_header = "Basic " + base64.b64encode(auth_bytes).decode("ascii")

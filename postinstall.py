@@ -51,9 +51,14 @@ def _write_setup_done(data_root: Path):
 
 
 def main():
+    # Setup marker is written unconditionally — even when there is nothing
+    # to install — so the "installation never completes" loop cannot occur
+    # when requirements.txt is missing.
+    data_root = _data_root()
     req = SKILL_DIR / "requirements.txt"
     if not req.exists():
         print("  requirements.txt not found — nothing to install.")
+        _write_setup_done(data_root)
         return
 
     print(f"  Installing Python dependencies from {req.name} ...")
@@ -67,8 +72,6 @@ def main():
         print("  ⚠ pip install had issues (dependencies may already be installed):")
         print(f"     {result.stderr.strip()[:200]}")
 
-    # Write setup marker
-    data_root = _data_root()
     _write_setup_done(data_root)
 
     print()

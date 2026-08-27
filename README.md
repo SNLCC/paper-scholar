@@ -140,6 +140,11 @@ python run.py model list     # 查看模型库
 
 PDF 文本提取默认使用 **MinerU 在线 API**，对扫描版、双栏、表格、公式的解析精度最高。
 
+> ⚠️ **隐私提醒**：默认 `auto` 引擎会先把 PDF 上传到 MinerU 在线服务（第三方）解析，功能无需 token 即可上传小文件。上传前**不会再次征求你的同意**。公开论文影响不大；但**未发表稿件、内部材料、审稿文件、含个人/版权信息的文件**请勿在默认模式下处理——这类文件需先确认可上传，或显式改用本地引擎：
+> ```bash
+> python run.py extract paper.pdf --engine local   # 本地离线，不上传
+> ```
+
 ```bash
 # 免 Token 轻量 API（≤10MB，≤20页，IP 限频）
 python run.py extract paper.pdf --engine mineru
