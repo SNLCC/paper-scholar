@@ -169,7 +169,7 @@ MIT License — 详见 [LICENSE](LICENSE)。
 
 | 库 | 版本 | 许可证 | 说明 |
 |----|------|--------|------|
-| MinerU 在线 API | 用户自备 token（mineru.net 申请） | Apache 2.0 + 附加条款 | 在线 PDF 解析首选引擎；本工具仅作 HTTP 客户端调用，不复制/分发其代码与模型 |
+| MinerU 在线 API | 用户自备 token（MinerU官网申请） | Apache 2.0 + 附加条款 | 在线 PDF 解析首选引擎；本工具仅作 HTTP 客户端调用，不复制/分发其代码与模型 |
 | [requests](https://github.com/psf/requests) | `>=2.28.0` | Apache 2.0 | MinerU API 调用（唯一硬依赖） |
 | [PyMuPDF](https://github.com/pymupdf/PyMuPDF) | 按需安装 | AGPL | 本地离线引擎，首次使用时提示安装 |
 | [pdfplumber](https://github.com/jsvine/pdfplumber) | 按需安装 | MIT | 本地离线引擎备选，按需安装 |
