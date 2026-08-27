@@ -157,6 +157,8 @@ python run.py extract paper.pdf --engine pymupdf-v62 --show-info  # 双栏自检
 
 > 本地引擎（PyMuPDF / pdfplumber）按需安装 —— 首次使用时脚本会提示并引导安装，或在 MinerU 不可用时自动提示。
 
+> 使用 MinerU 在线 API 即视为同意 mineru.net 平台的服务条款与配额规则；请遵守其免费额度/限频限制，并妥善保管 token（勿提交到公开仓库）。
+
 ---
 
 ## 许可证
@@ -167,6 +169,7 @@ MIT License — 详见 [LICENSE](LICENSE)。
 
 | 库 | 版本 | 许可证 | 说明 |
 |----|------|--------|------|
+| MinerU 在线 API | 用户自备 token（mineru.net 申请） | Apache 2.0 + 附加条款 | 在线 PDF 解析首选引擎；本工具仅作 HTTP 客户端调用，不复制/分发其代码与模型 |
 | [requests](https://github.com/psf/requests) | `>=2.28.0` | Apache 2.0 | MinerU API 调用（唯一硬依赖） |
 | [PyMuPDF](https://github.com/pymupdf/PyMuPDF) | 按需安装 | AGPL | 本地离线引擎，首次使用时提示安装 |
 | [pdfplumber](https://github.com/jsvine/pdfplumber) | 按需安装 | MIT | 本地离线引擎备选，按需安装 |

@@ -119,7 +119,7 @@ def cmd_configure_interactive():
         "1/6 · MinerU API Token",
         "  MinerU 是首选 PDF 解析引擎（支持扫描件/双栏/表格/公式）。\n"
         "  免 Token 可用轻量 API（≤10MB/≤20页，IP 限频）。\n"
-        "  申请地址: https://mineru.net/",
+        "  申请地址: MinerU官网",
         config, secret=True
     )
     config["mineru_token"] = val
